@@ -26,7 +26,7 @@ exports.update_device_id = "UPDATE devices SET unique_id = ? WHERE unique_id = ?
 
 exports.select_device = "SELECT * FROM devices WHERE unique_id = ?;";
 
-exports.update_device = "UPDATE devices SET latitude = ?, longitude = ?, area_code= ? WHERE unique_id = ?;";
+exports.update_device = "UPDATE devices SET latitude = ?, longitude = ?, area_code = ?, disable = 0 WHERE unique_id = ?;";
 
 exports.insert_areas = "INSERT INTO areas (area_code, city) VALUES (?, ?);";
 
@@ -35,3 +35,5 @@ exports.insert_red_alert_notification = "INSERT INTO red_alert (time, area_code)
 exports.select_devices_by_area_code = "SELECT * FROM devices WHERE area_code = ?;";
 
 exports.select_user_by_email = "SELECT * FROM users WHERE email = ?;";
+
+exports.select_area_code_by_city_name = "SELECT area_code FROM areas WHERE city = ?;";
