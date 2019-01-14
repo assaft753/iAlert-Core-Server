@@ -18,7 +18,11 @@ exports.insert_user = "INSERT INTO users (email, admin) VALUES (?,?);";
 
 exports.insert_user_with_points = "INSERT INTO users (email, admin, points_approved, points_collected, points_declined) VALUES (?,?,?,?,?);";
 
-exports.insert_device = "INSERT INTO devices (unique_id, latitude, longitude, area_code) VALUES (?, ?, ?, ?);";
+exports.register_device = "INSERT INTO devices (unique_id) VALUES (?);";
+
+//exports.insert_device = "INSERT INTO devices (unique_id, latitude, longitude, area_code) VALUES (?, ?, ?, ?);";
+
+exports.update_device_id = "UPDATE devices SET unique_id = ? WHERE unique_id = ?;";
 
 exports.update_device = "UPDATE devices SET latitude = ?, longitude = ?, area_code= ? WHERE unique_id = ?;";
 
