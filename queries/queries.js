@@ -10,9 +10,9 @@ exports.update_approved_shelter = "UPDATE shelters (approved) SET approved = 1 W
 
 exports.delete_shelter = "DELETE FROM shelters WHERE id = ?;";
 
-exports.update_pointes_declined_for_user = "UPDATE users (points_declined) SET points_decliend = points_decliend + 1 WHERE email = ?;";
+exports.update_pointes_declined_for_user = "UPDATE users SET points_declined = points_declined + 1 WHERE email = ?;";
 
-exports.update_pointes_approved_for_user = "UPDATE users (points_approved) SET pointes_approved = pointes_approved + 1 WHERE email = ?;";
+exports.update_pointes_approved_for_user = "UPDATE users SET points_approved = points_approved + 1 WHERE email = ?;";
 
 exports.insert_user = "INSERT INTO users (email, admin) VALUES (?,?);";
 
@@ -27,3 +27,5 @@ exports.insert_areas = "INSERT INTO areas (area_code, city) VALUES (?, ?);";
 exports.insert_red_alert_notification = "INSERT INTO red_alert (time, area_code) VALUES (?, ?);";
 
 exports.select_devices_by_area_code = "SELECT * FROM devices WHERE area_code = ?;";
+
+exports.select_user_by_email = "SELECT * FROM users WHERE email = ?;";
