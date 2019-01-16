@@ -1,19 +1,7 @@
 var mysql = require('mysql');
 var express = require('express');
-var queries = require('../queries/queries');
 var router = express.Router();
-var sync_mysql = require('../models/promise-db');
 var connection;
-//mysql.createConnection({
-//    host: 'localhost',
-//    user: 'ialert',
-// password: '1234567',
-// database: 'iAlert'
-//}).then(function(conn){
-//    connection = conn;
-//}).catch(function (error) {
-//    console.error('Could not connect to DB due to error: ' + error);
-//});
 
 connection = mysql.createConnection({
     host: "localhost",
@@ -27,7 +15,6 @@ connection.connect(function (err) {
     else console.log("Connected!");
 });
 
-//module.exports = function (app) {
 function isEmpty(value) {
     return (
         value === '' ||
@@ -44,13 +31,6 @@ router.get('/', function (req, res) {
 });
 
 router.get('/shelters', function (req, res) {
-    //	connection.connect(function(err) {
-    //		if (err) {
-    //      		console.error('Could not connect to DB due to error: ' + err);
-    //      		return res.status(err.errCode).send('Could not connect to DB due to error: ' + err.message);
-    //		}
-    //		console.log("Connected!");
-
     connection.query('SELECT * FROM shelters', function (err, dbRes) {
         if (err) {
             return res.status(err.errCode).send(err.message);
@@ -58,7 +38,6 @@ router.get('/shelters', function (req, res) {
             return res.status(200).send(dbRes);
         }
     });
-    //  	});
 });
 
 
@@ -95,7 +74,7 @@ router.post('/shelters', function (req, res) {
             } else {
                 return res.status(200).send(dbRes);
             }
-        });
+    });
 });
 
 
@@ -105,11 +84,7 @@ router.put('/shelters/:id', function (req, res) {
     if (isEmpty(id)) {
         return res.status(501).send('id path parameter is mandatory');
     }
-    //assaf 
-    //var dbRes = sync_mysql.query(queries.update_approved_shelter, [id]);
-    //return res.status(200).send(dbRes);
 
-    //before
     connection.query('UPDATE shelters SET approved = 1 WHERE id = ' + id, function (err, dbRes) {
         if (err) {
             return res.status(err.errCode).send(err.message);
@@ -119,22 +94,21 @@ router.put('/shelters/:id', function (req, res) {
     });
 });
 
-    router.delete('/shelters/:id', function (req, res) {
-        var id = req.params.id;
+router.delete('/shelters/:id', function (req, res) {
+    var id = req.params.id;
 
-        if (isEmpty(id)) {
-            return res.status(501).send('id path parameter is mandatory');
+    if (isEmpty(id)) {
+        return res.status(501).send('id path parameter is mandatory');
+    }
+
+   connection.query('DELETE FROM shelters WHERE id = ' + id, function (err, dbRes) {
+        if (err) {
+            return res.status(err.errCode).send(err.message);
+        } else {
+            return res.status(200).send(dbRes);
         }
-
-       connection.query('DELETE FROM shelters WHERE id = ' + id, function (err, dbRes) {
-            if (err) {
-                return res.status(err.errCode).send(err.message);
-            } else {
-                return res.status(200).send(dbRes);
-            }
-        });
-//DELETE FROM shelters WHERE id = ?;"
     });
+});
 
 router.get('/devices/:area_code', function (req, res) {
     var area_code = req.params.area_code;
@@ -185,8 +159,6 @@ router.post('/users', function (req, res) {
     });
 });
 
-
-//INSERT INTO areas (area_code, city) VALUES (?, ?);
 router.post('/areas', function (req, res) {
     var area_code = req.body.area_code ? req.body.area_code : '';
     var city = req.body.city ? req.body.city : '';
@@ -201,7 +173,6 @@ router.post('/areas', function (req, res) {
     });
 });
 
-//UPDATE users (points_approved) SET pointes_approved = pointes_approved + 1 WHERE email = ?;
 router.put('/users/points_approved/:email', function (req, res) {
     var email = req.params.email;
 
