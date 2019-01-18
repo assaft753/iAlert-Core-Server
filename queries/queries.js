@@ -37,3 +37,5 @@ exports.select_devices_by_area_code = "SELECT * FROM devices WHERE area_code = ?
 exports.select_user_by_email = "SELECT * FROM users WHERE email = ?;";
 
 exports.select_area_code_by_city_name = "SELECT area_code FROM areas WHERE city = ?;";
+
+exports.select_closest_shelter = "SELECT *,SQRT(POW(s.`x` - ?,2) + POW(s.`y` - ?,2)) as w FROM shelters as s WHERE SQRT(POW(s.`x` - ?,2) + POW(s.`y` - ?,2)) < ? ORDER BY w ASC LIMIT 1;";//order!!!
