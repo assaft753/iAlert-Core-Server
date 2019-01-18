@@ -1,48 +1,23 @@
-var mysql = require('mysql');
 var express = require('express');
-var queries = require('../queries/queries');
 var router = express.Router();
-var connection;
-
-connection = mysql.createConnection({
-    host: "localhost",
-    user: "ialert",
-    password: "1234567",
-    database: 'iAlert'
-});
-
-connection.connect(function (err) {
-    if (err) console.error('Could not connect to DB due to error: ' + err);
-    else console.log("Connected!");
-});
-
-function isEmpty(value) {
-    return (
-        value === '' ||
-        value === null ||
-        value === undefined ||
-        (Array.isArray(value) && value.length === 0) ||
-        (typeof value === 'object' && !(value instanceof Map) && Object.keys(value).length === 0) ||
-        (value instanceof Map && value.size === 0)
-    );
-}
-
-//------- Shelters -------//
+var connection = require('../models/async-db');
+var helper = require('../models/helper');
 
 router.get('/shelters', function (req, res) {
-    connection.query(queries.select_all_shelters, function (err, dbRes) {
+    connection.query('SELECT * FROM shelters', function (err, dbRes) {
+        console.log(err);
+        console.log(dbRes);
         if (err) {
-            return res.status(err.code).send(err.message);
+            return res.status(500).send(err.message);
         } else {
             return res.status(200).send(dbRes);
         }
     });
 });
 
-
 router.get('/shelters/safeZones/:areas', function (req, res) {
     var areas = req.params.areas;
-    if (isEmpty(areas)) {
+    if (helper.isEmpty(areas)) {
         return res.status(501).send('areas path parameter is mandatory');
     }
 
@@ -80,12 +55,16 @@ router.post('/shelters', function (req, res) {
 router.put('/shelters/:id', function (req, res) {
     var id = req.params.id;
 
-    if (isEmpty(id)) {
+    if (helper.isEmpty(id)) {
         return res.status(501).send('id path parameter is mandatory');
     }
 
+<<<<<<< HEAD
     connection.query(queries.update_approved_shelter, [id], function (err, dbRes) {
     // connection.query('UPDATE shelters SET approved = 1 WHERE id = ' + id, function (err, dbRes) {
+=======
+    connection.query('UPDATE shelters SET approved = 1 WHERE id = ' + id, function (err, dbRes) {
+>>>>>>> c4a856b33bd1e547556806d9e4b33ec45872ecd2
         if (err) {
             return res.status(err.code).send(err.message);
         } else {
@@ -97,6 +76,7 @@ router.put('/shelters/:id', function (req, res) {
 router.delete('/shelters/:id', function (req, res) {
     var id = req.params.id;
 
+<<<<<<< HEAD
     if (isEmpty(id)) {
         return res.status(501).send('id path parameter is mandatory');
     }
@@ -105,23 +85,39 @@ router.delete('/shelters/:id', function (req, res) {
    // connection.query('DELETE FROM shelters WHERE id = ' + id, function (err, dbRes) {
         if (err) {
             return res.status(err.code).send(err.message);
+=======
+    if (helper.isEmpty(id)) {
+        return res.status(501).send('id path parameter is mandatory');
+    }
+
+    connection.query('DELETE FROM shelters WHERE id = ' + id, function (err, dbRes) {
+        if (err) {
+            return res.status(err.errCode).send(err.message);
+>>>>>>> c4a856b33bd1e547556806d9e4b33ec45872ecd2
         } else {
             return res.status(200).send(dbRes);
         }
     });
 });
+<<<<<<< HEAD
 
 //------- Devices -------//
+=======
+>>>>>>> c4a856b33bd1e547556806d9e4b33ec45872ecd2
 
 router.get('/devices/:area_code', function (req, res) {
     var area_code = req.params.area_code;
-    if (isEmpty(area_code)) {
+    if (helper.isEmpty(area_code)) {
         return res.status(501).send('area_code path parameter is mandatory');
     }
 
     area_code = parseInt(area_code, 10);
+<<<<<<< HEAD
     connection.query(queries.select_devices_by_area_code, [area_code], function (err, dbRes) {
     // connection.query('SELECT * FROM devices WHERE area_code = ' + area_code, function ( err, dbRes ) {
+=======
+    connection.query('SELECT * FROM devices WHERE area_code = ' + area_code, function (err, dbRes) {
+>>>>>>> c4a856b33bd1e547556806d9e4b33ec45872ecd2
         if (err) {
             return res.status(err.code).send(err.message);
         } else {
@@ -139,6 +135,7 @@ router.post('/users/withPoints', function (req, res) {
     var points_collected = req.body.points_collected ? req.body.points_collected : 0;
     var points_declined = req.body.points_declined ? req.body.points_declined : '';
 
+<<<<<<< HEAD
     connection.query(queries.insert_user_with_points, [email, admin, points_approved, points_collected, points_declined]
     // connection.query('INSERT INTO users (email, admin, points_approved, points_collected, points_declined) ' +
     //                 'VALUES ("' + email + '",' + admin + ',' + points_approved + ',' + points_collected + ',' + points_declined + ')'
@@ -149,12 +146,24 @@ router.post('/users/withPoints', function (req, res) {
             return res.status(200).send(dbRes);
         }
     });
+=======
+    connection.query('INSERT INTO users (email, admin, points_approved, points_collected, points_declined) ' +
+        'VALUES ("' + email + '",' + admin + ',' + points_approved + ',' + points_collected + ',' + points_declined + ')'
+        , function (err, dbRes) {
+            if (err) {
+                return res.status(err.errCode).send(err.message);
+            } else {
+                return res.status(200).send(dbRes);
+            }
+        });
+>>>>>>> c4a856b33bd1e547556806d9e4b33ec45872ecd2
 });
 
 router.post('/users', function (req, res) {
     var email = req.body.email ? req.body.email : '';
     var admin = req.body.admin ? req.body.admin : false;
 
+<<<<<<< HEAD
     connection.query(queries.insert_user, [email, admin]
     // connection.query('INSERT INTO users (email, admin) VALUES ("' + email + '",' + admin + ')'
                     , function ( err, dbRes ) {
@@ -184,9 +193,36 @@ router.put('/users/points_approved/:email', function (req, res) {
 });
 
 router.put('/users/points_declined/:email', function (req, res) {
+=======
+    connection.query('INSERT INTO users (email, admin) VALUES ("' + email + '",' + admin + ')'
+        , function (err, dbRes) {
+            if (err) {
+                return res.status(err.errCode).send(err.message);
+            } else {
+                return res.status(200).send(dbRes);
+            }
+        });
+});
+
+router.post('/areas', function (req, res) {
+    var area_code = req.body.area_code ? req.body.area_code : '';
+    var city = req.body.city ? req.body.city : '';
+
+    connection.query('INSERT INTO areas (area_code, city) VALUES (' + area_code + ',"' + city + '")'
+        , function (err, dbRes) {
+            if (err) {
+                return res.status(err.errCode).send(err.message);
+            } else {
+                return res.status(200).send(dbRes);
+            }
+        });
+});
+
+router.put('/users/points_approved/:email', function (req, res) {
+>>>>>>> c4a856b33bd1e547556806d9e4b33ec45872ecd2
     var email = req.params.email;
 
-    if (isEmpty(email)) {
+    if (helper.isEmpty(email)) {
         return res.status(501).send('email path parameter is mandatory');
     }
 
@@ -202,7 +238,12 @@ router.put('/users/points_declined/:email', function (req, res) {
 
 router.get('/users/:email', function (req, res) {
     var email = req.params.email;
+<<<<<<< HEAD
     if (isEmpty(email)) {
+=======
+
+    if (helper.isEmpty(email)) {
+>>>>>>> c4a856b33bd1e547556806d9e4b33ec45872ecd2
         return res.status(501).send('email path parameter is mandatory');
     }
 
@@ -216,6 +257,7 @@ router.get('/users/:email', function (req, res) {
     });
 });
 
+<<<<<<< HEAD
 //------- Areas -------//
 
 router.post('/areas', function (req, res) {
@@ -225,6 +267,15 @@ router.post('/areas', function (req, res) {
     connection.query(queries.insert_areas, [area_code, city]
     // connection.query('INSERT INTO areas (area_code, city) VALUES (' + area_code + ',"' + city + '")'
                     , function ( err, dbRes ) {
+=======
+router.get('/users/:email', function (req, res) {
+    var email = req.params.email;
+    if (helper.isEmpty(email)) {
+        return res.status(501).send('email path parameter is mandatory');
+    }
+
+    connection.query('SELECT * FROM users WHERE email = "' + email + '"', function (err, dbRes) {
+>>>>>>> c4a856b33bd1e547556806d9e4b33ec45872ecd2
         if (err) {
             return res.status(err.code).send(err.message);
         } else {
