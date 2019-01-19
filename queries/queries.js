@@ -13,7 +13,7 @@ exports.delete_shelter = "DELETE FROM shelters WHERE id = ?;";
 
 //------- Red alert for users -------//
 
-exports.insert_red_alert_for_user = "INSERT INTO red_alert_for_users VALUES (?,?,?,?);";
+exports.insert_red_alert_for_user = "INSERT INTO red_alert_for_users (red_alert_id, shelter_id, arrived, device_id) VALUES (?,?,?,?);";
 
 exports.update_arrival_to_safe_zone = "UPDATE red_alert_for_users SET arrived = 1 WHERE unique_id = ? AND red_alert_id = ?;";
 
@@ -21,7 +21,6 @@ exports.update_arrival_to_safe_zone = "UPDATE red_alert_for_users SET arrived = 
 //------- Users -------//
 
 exports.update_pointes_declined_for_user = "UPDATE users SET points_declined = points_declined + 1 WHERE email = ?;";
-
 exports.update_pointes_approved_for_user = "UPDATE users SET points_approved = points_approved + 1 WHERE email = ?;";
 
 exports.insert_user = "INSERT INTO users (email, admin) VALUES (?,?);";
@@ -43,7 +42,7 @@ exports.select_device = "SELECT * FROM devices WHERE unique_id = ?;";
 
 exports.update_device = "UPDATE devices SET latitude = ?, longitude = ?, area_code = ?, disable = 0 WHERE unique_id = ?;";
 
-exports.select_devices_by_area_code = "SELECT * FROM devices WHERE area_code = ?;";
+exports.select_devices_by_area_code = "SELECT * FROM devices WHERE area_code = ? AND disable = 0;";
 
 
 //------- Areas -------//
