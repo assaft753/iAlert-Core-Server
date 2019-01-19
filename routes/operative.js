@@ -47,14 +47,14 @@ router.get('/notify/:areacode', (req, res, next) => {
                     },
                     token: deviceId
                 };
-
-                fbAdmin.messaging().send(message)
-                    .then((response) => {
+                fbAdmin.messaging().send(message).then(data =>{console.log('Successfully sent message:', response);
+            }).catch(err =>{console.log('Error sending message:', error);})
+                   /* .then((response) => {
                         console.log('Successfully sent message:', response);
                     })
                     .catch((error) => {
                         console.log('Error sending message:', error);
-                    });
+                    });*/
             });
         });
     });
