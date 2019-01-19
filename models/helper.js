@@ -7,7 +7,7 @@ exports.isEmpty = function (value) {
         (typeof value === 'object' && !(value instanceof Map) && Object.keys(value).length === 0) ||
         (value instanceof Map && value.size === 0)
     );
-}
+};
 
 exports.degreeToXY = function (lat, lon) {
     var rMajor = 6378137; //Equatorial Radius, WGS84
@@ -17,4 +17,4 @@ exports.degreeToXY = function (lat, lon) {
     y = y * shift / 180;
 
     return { 'x': x, 'y': y };
-}
+};
