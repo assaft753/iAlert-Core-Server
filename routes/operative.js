@@ -16,9 +16,7 @@ router.get('/notify/:areacode', (req, res, next) => {
         return;
     }
 
-    async_db.query(queries.insert_areas, [new Date(), areacode], (err, dbRes) => {
-        console.log(err);
-        console.log(dbRes);
+    async_db.query(queries.insert_red_alert_notification, [new Date(), areacode], (err, dbRes) => {
         if (!helper.isEmpty(err)) {
             res.status(500).send(err);
             return;
@@ -29,8 +27,6 @@ router.get('/notify/:areacode', (req, res, next) => {
         }
         var redAlertId = dbRes['insertId'];
         async_db.query(queries.select_devices_by_area_code, [areacode], (err, devices) => {
-            console.log(err);
-            console.log(devices);
             if (!helper.isEmpty(err)) {
                 res.status(500).send(err);
                 return;
@@ -47,18 +43,41 @@ router.get('/notify/:areacode', (req, res, next) => {
                     },
                     token: deviceId
                 };
-
-                fbAdmin.messaging().send(message)
-                    .then((response) => {
-                        console.log('Successfully sent message:', response);
-                    })
-                    .catch((error) => {
-                        console.log('Error sending message:', error);
-                    });
+                try {
+                    fbAdmin.messaging().send(message).then(data => {
+                        console.log('Successfully sent message:', data);
+                    }).catch(err => { console.log('Error sending message:', err); })
+                }
+                catch (err) {
+                    console.log('Error sending message:', err);
+                }
+                /* .then((response) => {
+                     console.log('Successfully sent message:', response);
+                 })
+                 .catch((error) => {
+                     console.log('Error sending message:', error);
+                 });*/
             });
+            res.sendStatus(200);
         });
     });
+});
 
+router.post('/arrive', (req, res, next) => {
+    var redAlertId = req.body['red_alert_id'];
+    var deviceId = req.body['device_id'];
+    if (helper.isEmpty(redAlertId) || helper.isEmpty(deviceId)) {
+        res.sendStatus(400);
+        return;
+    }
+
+    async_db.query(queries.update_arrival_to_safe_zone, [deviceId, redAlertId], (err, dbRes) => {
+        if (!helper.isEmpty(err)) {
+            res.status(500).send(err);
+            return;
+        }
+        res.sendStatus(200);
+    });
 });
 
 module.exports = router;
