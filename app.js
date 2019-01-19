@@ -4,14 +4,12 @@ var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 
-//var indexRouter = require('./routes/index');
 var idleRouter = require('./routes/idle');
-var routesRouter = require('./routes/routes');
+var managementRouter = require('./routes/management');
 var operativeRouter = require('./routes/operative');
 
 var app = express();
 
-//Sapir
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'pug');
@@ -28,7 +26,7 @@ app.use(function (req, res, next) {
   next();
 });
 
-app.use('/', routesRouter);
+app.use('/', managementRouter);
 app.use('/idle', idleRouter);
 app.use('/operative', operativeRouter);
 

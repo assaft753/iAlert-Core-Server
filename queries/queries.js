@@ -2,16 +2,16 @@
 
 exports.select_all_shelters = "SELECT * FROM shelters";
 
-exports.select_shelters_by_location = "SELECT * FROM shelters WHERE areas = ? AND approved = 1;";
+exports.select_shelters_by_location = "SELECT * FROM shelters WHERE area_code = ? AND approved = 1;";
 
-exports.insert_shelter = "INSERT INTO shelters (areas, user_id, latitude, longitude, address, x, y) VALUES (?,?,?,?,?,?,?);";
+exports.insert_shelter = "INSERT INTO shelters (area_code, user_id, latitude, longitude, address) VALUES (?,?,?,?,?);";
 
 exports.update_approved_shelter = "UPDATE shelters SET approved = 1 WHERE id = ?;";
 
 exports.delete_shelter = "DELETE FROM shelters WHERE id = ?;";
 
 
-//------- Red alert for users -------//
+//------- Red alert for devices -------//
 
 exports.insert_red_alert_for_user = "INSERT INTO devices_red_alert (red_alert_id, shelter_id, arrived, device_id) VALUES (?,?,?,?);";
 
@@ -44,6 +44,8 @@ exports.update_device = "UPDATE devices SET latitude = ?, longitude = ?, area_co
 
 exports.select_devices_by_area_code = "SELECT * FROM devices WHERE area_code = ? AND disable = 0;";
 
+exports.select_lat_lon_by_unique_id = "SELECT latitude,longitude FROM devices WHERE unique_id = ?;";
+
 
 //------- Areas -------//
 
@@ -51,11 +53,11 @@ exports.insert_areas = "INSERT INTO areas (area_code, city) VALUES (?, ?);";
 
 exports.select_area_code_by_city_name = "SELECT area_code FROM areas WHERE city = ?;";
 
+exports.select_area_id_by_city_name = "SELECT id FROM areas WHERE city = ?;";
+
 exports.select_area_id_by_area_code = "SELECT id FROM areas WHERE area_code = ?;";
 
 
 //------- Red alert -------//
 
 exports.insert_red_alert_notification = "INSERT INTO red_alert (time, area_code) VALUES (?, ?);";
-
-exports.select_closest_shelter = "SELECT *,SQRT(POW(s.`x` - ?,2) + POW(s.`y` - ?,2)) as w FROM shelters as s WHERE SQRT(POW(s.`x` - ?,2) + POW(s.`y` - ?,2)) < ? ORDER BY w ASC LIMIT 1;";//order!!!
