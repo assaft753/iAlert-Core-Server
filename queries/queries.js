@@ -15,7 +15,7 @@ exports.delete_shelter = "DELETE FROM shelters WHERE id = ?;";
 
 exports.insert_red_alert_for_user = "INSERT INTO devices_red_alert (red_alert_id, shelter_id, arrived, device_id) VALUES (?,?,?,?);";
 
-exports.update_arrival_to_safe_zone = "UPDATE devices_red_alert SET arrived = 1 WHERE unique_id = ? AND red_alert_id = ?;";
+exports.update_arrival_to_safe_zone = "UPDATE devices_red_alert SET arrived = 1 WHERE device_id = ? AND red_alert_id = ?;";
 
 
 //------- Users -------//
