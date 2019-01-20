@@ -5,10 +5,6 @@ var async_db = require('../models/async-db');
 var queries = require('../queries/queries');
 var fbAdmin = require('../models/iAlert-firebase');
 
-router.get('/', function (req, res, next) {
-    res.send('respond with a resource');
-});
-
 router.get('/notify/:areacode', (req, res, next) => {
     var areacode = req.params.areacode;
     if (helper.isEmpty(areacode)) {

@@ -26,7 +26,7 @@ app.use(function (req, res, next) {
   next();
 });
 
-app.use('/', managementRouter);
+app.use('/management', managementRouter);
 app.use('/idle', idleRouter);
 app.use('/operative', operativeRouter);
 

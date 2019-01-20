@@ -34,8 +34,6 @@ exports.select_user_by_email = "SELECT * FROM users WHERE email = ?;";
 
 exports.register_device = "INSERT INTO devices (unique_id) VALUES (?);";
 
-//exports.insert_device = "INSERT INTO devices (unique_id, latitude, longitude, area_code) VALUES (?, ?, ?, ?);";
-
 exports.update_device_id = "UPDATE devices SET unique_id = ? WHERE unique_id = ?;";
 
 exports.select_device = "SELECT * FROM devices WHERE unique_id = ?;";
