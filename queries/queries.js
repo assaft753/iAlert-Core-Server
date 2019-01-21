@@ -2,25 +2,35 @@
 
 exports.select_all_shelters = "SELECT * FROM shelters";
 
+exports.select_all_by_lat_lon = "SELECT * FROM shelters WHERE latitude = ? AND longitude = ?;";
+
 exports.select_shelters_by_location = "SELECT * FROM shelters WHERE area_code = ? AND approved = 1;";
 
-exports.insert_shelter = "INSERT INTO shelters (area_code, user_id, latitude, longitude, address) VALUES (?,?,?,?,?);";
+exports.insert_shelter = "INSERT INTO shelters (area_code, user_email, latitude, longitude, address) VALUES (?,?,?,?,?);";
 
 exports.update_approved_shelter = "UPDATE shelters SET approved = 1 WHERE id = ?;";
 
 exports.delete_shelter = "DELETE FROM shelters WHERE id = ?;";
 
+exports.select_all_approved_shelters = "SELECT * FROM shelters WHERE approved = 1;";
+
 
 //------- Red alert for devices -------//
 
-exports.insert_red_alert_for_user = "INSERT INTO devices_red_alert (red_alert_id, shelter_id, arrived, device_id) VALUES (?,?,?,?);";
+exports.insert_red_alert_for_user = "INSERT INTO devices_red_alert (red_alert_id, shelter_id, arrived, device_id) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE shelter_id=? arrived=?;";
 
-exports.update_arrival_to_safe_zone = "UPDATE devices_red_alert SET arrived = 1 WHERE device_id = ? AND red_alert_id = ?;";
+
+//exports.insert_red_alert_for_user = "INSERT INTO devices_red_alert (red_alert_id, shelter_id, arrived, device_id) VALUES (?,?,?,?);";
+
+exports.update_arrival_to_safe_zone = "UPDATE devices as d, devices_red_alert as s SET s.arrived = 1 WHERE d.unique_id = ? && d.id = s.device_id;";
 
 
 //------- Users -------//
 
+exports.update_pointes_collected_for_user = "UPDATE users SET points_collected = points_collected + 1 WHERE email = ?;";
+
 exports.update_pointes_declined_for_user = "UPDATE users SET points_declined = points_declined + 1 WHERE email = ?;";
+
 exports.update_pointes_approved_for_user = "UPDATE users SET points_approved = points_approved + 1 WHERE email = ?;";
 
 exports.insert_user = "INSERT INTO users (email, admin) VALUES (?,?);";
@@ -40,11 +50,13 @@ exports.update_device_id = "UPDATE devices SET unique_id = ? WHERE unique_id = ?
 
 exports.select_device = "SELECT * FROM devices WHERE unique_id = ?;";
 
-exports.update_device = "UPDATE devices SET latitude = ?, longitude = ?, area_code = ?, disable = 0 WHERE unique_id = ?;";
+exports.update_device = "UPDATE devices SET latitude = ?, longitude = ?, area_code = ?, disable = 0, preferred_language=? WHERE unique_id = ?;";
 
 exports.select_devices_by_area_code = "SELECT * FROM devices WHERE area_code = ? AND disable = 0;";
 
 exports.select_lat_lon_by_unique_id = "SELECT latitude,longitude FROM devices WHERE unique_id = ?;";
+
+exports.update_preferred_language_by_unique_id = "UPDATE devices SET preferred_language=? WHERE unique_id=?;";
 
 
 //------- Areas -------//

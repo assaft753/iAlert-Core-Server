@@ -4,79 +4,79 @@ var helper = require('../models/helper');
 var async_db = require('../models/async-db');
 var queries = require('../queries/queries');
 var fbAdmin = require('../models/iAlert-firebase');
+var device_language_notification = require('./device_language_notification');
 
-router.get('/', function (req, res, next) {
-    res.send('respond with a resource');
-});
 
-router.get('/notify/:areacode', (req, res, next) => {
-    var areacode = req.params.areacode;
-    if (helper.isEmpty(areacode)) {
-        res.sendStatus(400);
-        return;
+router.get('/notify', function (req, res)  {
+    var area_code = req.query.area_code;
+    if (helper.isEmpty(area_code)) {
+        return res.status(400).send('area_code is mandatory');
     }
 
-    async_db.query(queries.insert_red_alert_notification, [new Date(), areacode], (err, dbRes) => {
+    async_db.query(queries.insert_red_alert_notification, [new Date(), area_code], function (err, dbRes) {
         if (!helper.isEmpty(err)) {
-            res.status(500).send(err);
-            return;
+            return res.status(500).send(err.message);
         }
-        if (dbRes['affectedRows'] == 0) {
-            res.status(500).send(err);
-            return;
+        if (dbRes['affectedRows'] === 0) {
+            return res.status(500).send('No rows were inserted to DB');
         }
         var redAlertId = dbRes['insertId'];
-        async_db.query(queries.select_devices_by_area_code, [areacode], (err, devices) => {
+        async_db.query(queries.select_devices_by_area_code, [area_code], function (err, devices) {
             if (!helper.isEmpty(err)) {
-                res.status(500).send(err);
-                return;
+                return res.status(500).send(err);
             }
-            devices.forEach(device => {
+            devices.forEach(function (device) {
                 var deviceId = device['unique_id'];
+                var preferred_language = device.preferred_language.toLowerCase();
+                console.log('preferred_language = ' + preferred_language);
+                console.log('device_language_notification[preferred_language] = ' + device_language_notification[preferred_language]);
+                console.log('device_language_notification[\'\'+preferred_language] = ' + JSON.stringify(device_language_notification[''+preferred_language], null, 4));
                 var message = {
                     notification: {
-                        title: 'צבע אדום',
-                        body: 'לחץ בכדי לקבל הכוונה למקום בטוח'
+                        title: device_language_notification[''+preferred_language].title,
+                        body: device_language_notification[''+preferred_language].body
                     },
                     data: {
-                        redAlertId: redAlertId
+                        redAlertId: redAlertId.toString()
                     },
-                    token: deviceId
+                    token: deviceId.toString()
                 };
                 try {
-                    fbAdmin.messaging().send(message).then(data => {
-                        console.log('Successfully sent message:', data);
-                    }).catch(err => { console.log('Error sending message:', err); })
+                    fbAdmin.messaging()
+                        .send(message)
+                        .then(function (data) {
+                            console.log('Successfully sent message:', data);
+                        }).catch(function (err) {
+                        console.log('Error sending message:', err);
+                    });
                 }
                 catch (err) {
                     console.log('Error sending message:', err);
                 }
-                /* .then((response) => {
-                     console.log('Successfully sent message:', response);
-                 })
-                 .catch((error) => {
-                     console.log('Error sending message:', error);
-                 });*/
             });
-            res.sendStatus(200);
+            return res.sendStatus(200);
         });
     });
 });
 
-router.post('/arrive', (req, res, next) => {
+router.post('/arrive', function (req, res) {
     var redAlertId = req.body['red_alert_id'];
     var deviceId = req.body['device_id'];
-    if (helper.isEmpty(redAlertId) || helper.isEmpty(deviceId)) {
-        res.sendStatus(400);
-        return;
+
+    if (helper.isEmpty(redAlertId)) {
+        return res.status(400).send('Red alert id is mandatory');
     }
 
-    async_db.query(queries.update_arrival_to_safe_zone, [deviceId, redAlertId], (err, dbRes) => {
+    if (helper.isEmpty(deviceId)) {
+        return res.status(400).send('Device id is mandatory');
+    }
+
+    async_db.query(queries.update_arrival_to_safe_zone, [deviceId, redAlertId], function (err) {
         if (!helper.isEmpty(err)) {
-            res.status(500).send(err);
-            return;
+            return res.status(500).send(err.message);
         }
-        res.sendStatus(200);
+
+        return res.sendStatus(200);
     });
 });
 
@@ -151,6 +151,25 @@ function getDistanceBetweenTwoPoints(deviceLat, deviceLon, shelterLat, shelterLo
     return R * c;
 }
 
+function getClosestShelters(latitude, longitude, red_alert_id, unique_id, cb) {
+    if (helper.isEmpty(latitude) && helper.isEmpty(longitude)) {
+        // select lat lon by unique id from users
+        async_db.query(queries.select_lat_lon_by_unique_id, [unique_id], function (coordErr, coordRes) {
+            if (coordErr) {
+                return res.status(500).send(coordErr.message);
+            } else if (helper.isEmpty(coordRes)) {
+                return res.status(404).send('Could not find coordinates for unique_id: ' + unique_id);
+            } else {
+                latitude = coordRes[0].latitude;
+                longitude = coordRes[0].longitude;
+                selectClosestShelters(latitude, longitude, false, cb);
+            }
+        })
+    } else {
+        selectClosestShelters(latitude, longitude, true, cb);
+    }
+}
+
 function selectClosestShelters(latitude, longitude, getAll, cb) {
     var MAXIMUM_DISTANCE = 400;
 
@@ -160,7 +179,7 @@ function selectClosestShelters(latitude, longitude, getAll, cb) {
     var p3 = calculateDerivedPosition(latitude, longitude, MULT * MAXIMUM_DISTANCE, 180);
     var p4 = calculateDerivedPosition(latitude, longitude, MULT * MAXIMUM_DISTANCE, 270);
 
-    var query = queries.select_all_shelters.split(';')[0] + " WHERE "
+    var query = queries.select_all_approved_shelters.split(';')[0] + " AND "
         + "latitude > " + p3.latitude + " AND "
         + "latitude < " + p1.latitude + " AND "
         + "longitude < " + p2.longitude + " AND "
@@ -177,69 +196,113 @@ function selectClosestShelters(latitude, longitude, getAll, cb) {
         } else {
             var smallestDistance = -1;
             var closestCoord = {};
+            var shelterId = -1;
             closestShelterArr.forEach(function (point) {
                 var tempDistance = getDistanceBetweenTwoPoints(latitude, longitude, point.latitude, point.longitude);
                 if (tempDistance < smallestDistance) {
                     smallestDistance = tempDistance;
                     closestCoord['latitude'] = point.latitude;
                     closestCoord['longitude'] = point.longitude;
+                    shelterId = point.id;
                 }
             });
-            return cb(null, null, closestCoord);
+            return cb(null, null, closestCoord, shelterId);
         }
     });
 }
 
+// function sendResult(error, message, closestCoord, shelterId, red_alert_id, unique_id, res) {
+//     if (error && error === 404) {
+//         return res.status(error).send(message);
+//     } else if (error) {
+//         return res.status(500).send(error.message);
+//     } else {
+//         var result = {
+//             result: closestCoord
+//         };
+//         res.status(200).send(result); // send shelter coordinates to device
+//
+//         if (!helper.isEmpty(red_alert_id)) {
+//             // Insert information to devices_red_alert table
+//             async_db.query(queries.insert_red_alert_for_user, [red_alert_id, shelterId, 0, unique_id], function (err) {
+//                 if (err) {
+//                     console.error('Error while inserting to devices_red_alert. Error: ' + err.message);
+//                     return;
+//                 } else {
+//                     console.log('Succeed inserting to devices_red_alert.');
+//                     return;
+//                 }
+//             });
+//         } else {
+//             return;
+//         }
+//     }
+// }
 
-router.get('/closestShelters/:unique_id', function (req, res) {
-    var unique_id = req.params.unique_id;
+router.post('/closestShelters', function (req, res) {
+    var unique_id = req.body.unique_id;
     var latitude = req.body.latitude;
     var longitude = req.body.longitude;
-    var red_alert_id = req.body.red_alert_id;
 
-    //---------- Private functions section ----------//
+    if (helper.isEmpty(unique_id)) {
+        return res.status(400).send('unique_id is mandatory');
+    }
 
-    function sendResult(error, message, closestCoord, shelterId) {
+    //getClosestShelters(latitude, longitude, null, unique_id, res);
+    getClosestShelters(latitude, longitude, null, unique_id, function (error, message, closestCoord) {
         if (error && error === 404) {
             return res.status(error).send(message);
         } else if (error) {
             return res.status(500).send(error.message);
         } else {
-            res.status(200).send(closestCoord); // send shelter coordinates to device
+            var result = {
+                result: closestCoord
+            };
+            res.status(200).send(result); // send shelter coordinates to device
+
+            return;
+        }
+    });
+});
+
+router.post('/closestSheltersAfterNotification', function (req, res) {
+    var unique_id = req.body.unique_id;
+    var latitude = req.body.latitude;
+    var longitude = req.body.longitude;
+    var red_alert_id = req.body.red_alert_id;
+
+    if (helper.isEmpty(unique_id)) {
+        return res.status(400).send('unique_id is mandatory');
+    }
+
+    if (helper.isEmpty(red_alert_id)) {
+        return res.status(400).send('red_alert_id is mandatory');
+    }
+
+    //getClosestShelters(latitude, longitude, red_alert_id, unique_id, res);
+    getClosestShelters(latitude, longitude, null, unique_id, function (error, message, closestCoord, shelterId) {
+        if (error && error === 404) {
+            return res.status(error).send(message);
+        } else if (error) {
+            return res.status(500).send(error.message);
+        } else {
+            var result = {
+                result: closestCoord
+            };
+            res.status(200).send(result); // send shelter coordinates to device
 
             // Insert information to devices_red_alert table
-            async_db.query(queries.insert_red_alert_for_user, [red_alert_id, shelterId, 0, unique_id], function (err, dbRes) {
+            async_db.query(queries.insert_red_alert_for_user, [red_alert_id, shelterId, 0, unique_id], function (err) {
                 if (err) {
-                    return res.status(err).send(err.message);
+                    console.error('Error while inserting to devices_red_alert. Error: ' + err.message);
+                    return;
                 } else {
-                    return res.status(200).send(dbRes);
+                    console.log('Succeed inserting to devices_red_alert.');
+                    return;
                 }
             });
         }
-    }
-
-    //---------- Code section ----------//
-
-    if (helper.isEmpty(unique_id)) {
-        return res.status(501).send('unique_id path parameter is mandatory');
-    }
-
-    if (helper.isEmpty(latitude) && helper.isEmpty(longitude)) {
-        // select lat lon by unique id from users
-        async_db.query(queries.select_lat_lon_by_unique_id, [unique_id], function (coordErr, coordRes) {
-            if (coordErr) {
-                return res.status(500).send(coordErr.message);
-            } else if (helper.isEmpty(coordRes)) {
-                return res.status(404).send('Could not find coordinates for unique_id: ' + unique_id);
-            } else {
-                latitude = coordRes[0].latitude;
-                longitude = coordRes[0].longitude;
-                selectClosestShelters(latitude, longitude, false, sendResult);
-            }
-        })
-    } else {
-        selectClosestShelters(latitude, longitude, true, sendResult);
-    }
+    });
 });
 
 module.exports = router;

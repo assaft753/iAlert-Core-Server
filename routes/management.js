@@ -14,15 +14,18 @@ router.get('/shelters', function (req, res) {
         } else if (helper.isEmpty(dbRes)) {
             return res.status(404).send('Could not find any shelter');
         } else {
-            return res.status(200).send(dbRes);
+            var result = {
+                result: dbRes
+            };
+            return res.status(200).send(result);
         }
     });
 });
 
-router.get('/shelters/safeZones/:area_code', function (req, res) {
-    var area_code = req.params.area_code;
+router.get('/shelters/safeZones', function (req, res) {
+    var area_code = req.query.area_code;
     if (helper.isEmpty(area_code)) {
-        return res.status(501).send('area code path parameter is mandatory');
+        return res.status(400).send('area_code is mandatory');
     }
 
     area_code = parseInt(area_code, 10);
@@ -32,33 +35,54 @@ router.get('/shelters/safeZones/:area_code', function (req, res) {
         } else if (helper.isEmpty(dbRes)) {
             return res.status(404).send('Could not find any shelter with area code: ' + area_code);
         } else {
-            return res.status(200).send(dbRes);
+            var result = {
+                result: dbRes
+            };
+            return res.status(200).send(result);
         }
     });
 });
 
 router.post('/shelters', function (req, res) {
-    var area_code = req.body.area_code ? req.body.area_code : -1;
-    var user_id = req.body.user_id ? req.body.user_id : 0;
+    var city = req.body.city ? req.body.city : '';
+    var user_email = req.body.user_email ? req.body.user_email : 0;
     var latitude = req.body.latitude ? req.body.latitude : 0;
     var longitude = req.body.longitude ? req.body.longitude : 0;
     var address = req.body.address ? req.body.address : '';
 
-    connection.query(queries.insert_shelter, [area_code, user_id, latitude, longitude, address], function (err, dbRes) {
+    connection.query(queries.select_area_code_by_city_name, [city.toLowerCase()], function (err, area_code) {
         if (err) {
             return res.status(500).send(err.message);
+        } else if (helper.isEmpty(area_code)){
+            return res.status(404).send('Could not find any area for city: ' + city);
         } else {
-            return res.status(200).send(dbRes);
+            area_code = area_code[0].area_code;
+            connection.query(queries.select_all_by_lat_lon, [latitude, longitude], function (err, dbRes) {
+                if (err) {
+                    return res.status(500).send(err.message);
+                } else if (!helper.isEmpty(dbRes)) {
+                    return res.status(200).send('This shelter in latitude = ' + latitude + ' and longitude = ' + longitude + ' already exists in DB');
+                } else {
+                    connection.query(queries.insert_shelter, [area_code, user_email, latitude, longitude, address], function (err, dbRes) {
+                        if (err) {
+                            return res.status(500).send(err.message);
+                        } else {
+                            return res.status(200).send(dbRes);
+                        }
+                    });
+                }
+            });
         }
     });
+
 });
 
 
-router.put('/shelters/:id', function (req, res) {
-    var id = req.params.id;
+router.put('/shelters', function (req, res) {
+    var id = req.query.id;
 
     if (helper.isEmpty(id)) {
-        return res.status(501).send('id path parameter is mandatory');
+        return res.status(400).send('id is mandatory');
     }
 
     id = parseInt(id, 10);
@@ -71,11 +95,11 @@ router.put('/shelters/:id', function (req, res) {
     });
 });
 
-router.delete('/shelters/:id', function (req, res) {
-    var id = req.params.id;
+router.delete('/shelters', function (req, res) {
+    var id = req.query.id;
 
     if (helper.isEmpty(id)) {
-        return res.status(501).send('id path parameter is mandatory');
+        return res.status(400).send('id is mandatory');
     }
 
     connection.query(queries.delete_shelter, [id], function (err, dbRes) {
@@ -90,10 +114,10 @@ router.delete('/shelters/:id', function (req, res) {
 
 //------- Devices -------//
 
-router.get('/devices/:area_code', function (req, res) {
-    var area_code = req.params.area_code;
+router.get('/devices', function (req, res) {
+    var area_code = req.query.area_code;
     if (helper.isEmpty(area_code)) {
-        return res.status(501).send('area_code path parameter is mandatory');
+        return res.status(400).send('area_code is mandatory');
     }
 
     area_code = parseInt(area_code, 10);
@@ -103,7 +127,10 @@ router.get('/devices/:area_code', function (req, res) {
         } else if (helper.isEmpty(dbRes)) {
             return res.status(404).send('Could not find any device with area code: ' + area_code);
         }  else {
-            return res.status(200).send(dbRes);
+            var result = {
+                result: dbRes
+            };
+            return res.status(200).send(result);
         }
     });
 });
@@ -141,11 +168,11 @@ router.post('/users', function (req, res) {
     });
 });
 
-router.put('/users/points_approved/:email', function (req, res) {
-    var email = req.params.email;
+router.put('/users/points_approved', function (req, res) {
+    var email = req.query.email;
 
     if (helper.isEmpty(email)) {
-        return res.status(501).send('email path parameter is mandatory');
+        return res.status(400).send('email is mandatory');
     }
 
     connection.query(queries.update_pointes_approved_for_user, [email], function (err, dbRes) {
@@ -157,11 +184,27 @@ router.put('/users/points_approved/:email', function (req, res) {
     });
 });
 
-router.put('/users/points_declined/:email', function (req, res) {
-    var email = req.params.email;
+router.put('/users/points_collected', function (req, res) {
+    var email = req.query.email;
 
     if (helper.isEmpty(email)) {
-        return res.status(501).send('email path parameter is mandatory');
+        return res.status(400).send('email is mandatory');
+    }
+
+    connection.query(queries.update_pointes_collected_for_user, [email], function (err, dbRes) {
+        if (err) {
+            return res.status(500).send(err.message);
+        } else {
+            return res.status(200).send(dbRes);
+        }
+    });
+});
+
+router.put('/users/points_declined', function (req, res) {
+    var email = req.query.email;
+
+    if (helper.isEmpty(email)) {
+        return res.status(400).send('email is mandatory');
     }
 
     connection.query(queries.update_pointes_declined_for_user, [email], function (err, dbRes) {
@@ -173,10 +216,10 @@ router.put('/users/points_declined/:email', function (req, res) {
     });
 });
 
-router.get('/users/:email', function (req, res) {
-    var email = req.params.email;
+router.get('/users', function (req, res) {
+    var email = req.query.email;
     if (helper.isEmpty(email)) {
-        return res.status(501).send('email path parameter is mandatory');
+        return res.status(400).send('email is mandatory');
     }
 
     connection.query(queries.select_user_by_email, [email], function (err, dbRes) {
@@ -185,7 +228,7 @@ router.get('/users/:email', function (req, res) {
         } else if (helper.isEmpty(dbRes)) {
             return res.status(404).send('Could not find any user with email: ' + email);
         }  else {
-            return res.status(200).send(dbRes);
+            return res.status(200).send(dbRes[0]);
         }
     });
 });
@@ -206,10 +249,10 @@ router.post('/areas', function (req, res) {
     });
 });
 
-router.get('/areas/:city', function (req, res) {
-    var city = req.params.city;
+router.get('/areas', function (req, res) {
+    var city = req.query.city;
     if (helper.isEmpty(city)) {
-        return res.status(501).send('city path parameter is mandatory');
+        return res.status(400).send('city is mandatory');
     }
 
     connection.query(queries.select_area_code_by_city_name, [city.toLowerCase()], function ( err, dbRes ) {
@@ -218,7 +261,7 @@ router.get('/areas/:city', function (req, res) {
         } else if (helper.isEmpty(dbRes)) {
             return res.status(404).send('Could not find any area for city name: ' + city.toLowerCase());
         } else {
-            return res.status(200).send(dbRes);
+            return res.status(200).send(dbRes[0]);
         }
     });
 });
