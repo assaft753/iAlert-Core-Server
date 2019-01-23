@@ -7,13 +7,19 @@ var router = express.Router();
 
 router.post('/register', function (req, res) {
   var uniqueId = req.body['unique_id'];
+  var isAndroid = req.body['is_android'];
   var prevUniqueId = req.body['prev_id'];
   if (helper.isEmpty(uniqueId)) {
-      return res.status(400).send('unique id is mandatory');
+      return res.status(400).send('unique_id is mandatory');
   }
 
   if (helper.isEmpty(prevUniqueId)) {
-      connection.query(queries.register_device, [uniqueId], function (err, dbRes) {
+      if (helper.isEmpty(isAndroid)) {
+          return res.status(400).send('is_android is mandatory');
+      }
+
+      isAndroid = isAndroid ? 1: 0;
+      connection.query(queries.register_device, [uniqueId, isAndroid], function (err, dbRes) {
          if (err) {
              return res.status(500).send(err.message);
          }  else if (dbRes['affectedRows'] > 0) {

@@ -5,9 +5,30 @@ var async_db = require('../models/async-db');
 var queries = require('../queries/queries');
 var fbAdmin = require('../models/iAlert-firebase');
 var device_language_notification = require('./device_language_notification');
-
+var rp = require('request-promise');
 
 router.get('/notify', function (req, res)  {
+
+    //------- Private function -------//
+
+    function sendNotification(message, deviceId) {
+        try {
+        fbAdmin.messaging()
+            .send(message)
+            .then(function (data) {
+                console.log('Successfully sent message: ' + data + ', to deviceId: ' + deviceId);
+            }).catch(function (err) {
+            console.log('Error sending message:', err);
+        });
+    }
+    catch (err) {
+            console.log('Error sending message:', err);
+        }
+
+    }
+
+    //------- Code section -------//
+
     var area_code = req.query.area_code;
     if (helper.isEmpty(area_code)) {
         return res.status(400).send('area_code is mandatory');
@@ -20,58 +41,90 @@ router.get('/notify', function (req, res)  {
         if (dbRes['affectedRows'] === 0) {
             return res.status(500).send('No rows were inserted to DB');
         }
-        var redAlertId = dbRes['insertId'];
-        async_db.query(queries.select_devices_by_area_code, [area_code], function (err, devices) {
-            if (!helper.isEmpty(err)) {
+
+        async_db.query(queries.select_max_time_by_area_code, [area_code], function (err, maxTime) {
+            if (err) {
                 return res.status(500).send(err);
             }
-            devices.forEach(function (device) {
-                var deviceId = device['unique_id'];
-                var preferred_language = device.preferred_language.toLowerCase();
-                console.log('preferred_language = ' + preferred_language);
-                console.log('device_language_notification[preferred_language] = ' + device_language_notification[preferred_language]);
-                console.log('device_language_notification[\'\'+preferred_language] = ' + JSON.stringify(device_language_notification[''+preferred_language], null, 4));
-                var message = {
-                    notification: {
-                        title: device_language_notification[''+preferred_language].title,
-                        body: device_language_notification[''+preferred_language].body
-                    },
-                    data: {
-                        redAlertId: redAlertId.toString()
-                    },
-                    token: deviceId.toString()
+
+            maxTime = maxTime[0].max_time_to_arrive_to_shelter;
+            var redAlertId = dbRes['insertId'];
+            async_db.query(queries.select_devices_by_area_code, [area_code], function (err, devices) {
+                if (!helper.isEmpty(err)) {
+                    return res.status(500).send(err);
+                }
+
+                var asyncForEach = function (devices, callback) {
+                    for (var index = 0; index < devices.length; index++) {
+                        callback(devices[index]);
+                    }
                 };
-                try {
-                    fbAdmin.messaging()
-                        .send(message)
-                        .then(function (data) {
-                            console.log('Successfully sent message:', data);
-                        }).catch(function (err) {
-                        console.log('Error sending message:', err);
+
+                var start = function async ()  {
+                    asyncForEach(devices, function async (device) {
+                        var deviceId = device['unique_id'];
+                        var preferred_language = device.preferred_language.toLowerCase();
+                        var message = {
+                            notification: {
+                                title: device_language_notification[''+preferred_language].title,
+                                body: device_language_notification[''+preferred_language].body
+                            },
+                            data: {
+                                redAlertId: redAlertId.toString()
+                            },
+                            token: deviceId.toString()
+                        };
+
+                        if (device.is_android) {
+                            var body = {
+                                unique_id: deviceId,
+                                latitude: device.latitude,
+                                longitude: device.longitude,
+                                red_alert_id: redAlertId
+                            };
+                            var options = {
+                                method: 'POST',
+                                uri: 'http://localhost:3000/operative/closestSheltersAfterNotification',
+                                body: body,
+                                json: true
+                            };
+
+                            rp(options)
+                                .then(function (resp) {
+                                    message.data['latitude'] = resp.result.latitude.toString();
+                                    message.data['longitude'] = resp.result.longitude.toString();
+				                    message.data['max_time_to_arrive_to_shelter'] = maxTime.toString();
+                                    sendNotification(message, deviceId);
+                                }).catch(function (err) {
+                                    console.error('Could not add latitude and longitude to notification message due to error: ' + err);
+                                }
+                            );
+                        } else {
+                            sendNotification(message, deviceId);
+                        }
                     });
-                }
-                catch (err) {
-                    console.log('Error sending message:', err);
-                }
+                    return res.sendStatus(200);
+                };
+
+                start();
             });
-            return res.sendStatus(200);
         });
     });
 });
 
 router.post('/arrive', function (req, res) {
     var redAlertId = req.body['red_alert_id'];
-    var deviceId = req.body['device_id'];
+    var unique_id = req.body['unique_id'];
 
     if (helper.isEmpty(redAlertId)) {
         return res.status(400).send('Red alert id is mandatory');
     }
 
-    if (helper.isEmpty(deviceId)) {
+    if (helper.isEmpty(unique_id)) {
         return res.status(400).send('Device id is mandatory');
     }
 
-    async_db.query(queries.update_arrival_to_safe_zone, [deviceId, redAlertId], function (err) {
+    async_db.query(queries.update_arrival_to_safe_zone, [unique_id, redAlertId], function (err) {
         if (!helper.isEmpty(err)) {
             return res.status(500).send(err.message);
         }
@@ -151,7 +204,7 @@ function getDistanceBetweenTwoPoints(deviceLat, deviceLon, shelterLat, shelterLo
     return R * c;
 }
 
-function getClosestShelters(latitude, longitude, red_alert_id, unique_id, cb) {
+function getClosestShelters(latitude, longitude, red_alert_id, unique_id, getAll, cb) {
     if (helper.isEmpty(latitude) && helper.isEmpty(longitude)) {
         // select lat lon by unique id from users
         async_db.query(queries.select_lat_lon_by_unique_id, [unique_id], function (coordErr, coordRes) {
@@ -162,11 +215,11 @@ function getClosestShelters(latitude, longitude, red_alert_id, unique_id, cb) {
             } else {
                 latitude = coordRes[0].latitude;
                 longitude = coordRes[0].longitude;
-                selectClosestShelters(latitude, longitude, false, cb);
+                selectClosestShelters(latitude, longitude, getAll, cb);
             }
         })
     } else {
-        selectClosestShelters(latitude, longitude, true, cb);
+        selectClosestShelters(latitude, longitude, getAll, cb);
     }
 }
 
@@ -194,11 +247,18 @@ function selectClosestShelters(latitude, longitude, getAll, cb) {
         } else if (getAll) {
             return cb(null, null, closestShelterArr);
         } else {
-            var smallestDistance = -1;
+            var smallestDistance;
             var closestCoord = {};
             var shelterId = -1;
             closestShelterArr.forEach(function (point) {
                 var tempDistance = getDistanceBetweenTwoPoints(latitude, longitude, point.latitude, point.longitude);
+                if (helper.isEmpty(smallestDistance)) {
+                    smallestDistance = tempDistance;
+                    closestCoord['latitude'] = point.latitude;
+                    closestCoord['longitude'] = point.longitude;
+                    shelterId = point.id;
+                }
+
                 if (tempDistance < smallestDistance) {
                     smallestDistance = tempDistance;
                     closestCoord['latitude'] = point.latitude;
@@ -211,33 +271,6 @@ function selectClosestShelters(latitude, longitude, getAll, cb) {
     });
 }
 
-// function sendResult(error, message, closestCoord, shelterId, red_alert_id, unique_id, res) {
-//     if (error && error === 404) {
-//         return res.status(error).send(message);
-//     } else if (error) {
-//         return res.status(500).send(error.message);
-//     } else {
-//         var result = {
-//             result: closestCoord
-//         };
-//         res.status(200).send(result); // send shelter coordinates to device
-//
-//         if (!helper.isEmpty(red_alert_id)) {
-//             // Insert information to devices_red_alert table
-//             async_db.query(queries.insert_red_alert_for_user, [red_alert_id, shelterId, 0, unique_id], function (err) {
-//                 if (err) {
-//                     console.error('Error while inserting to devices_red_alert. Error: ' + err.message);
-//                     return;
-//                 } else {
-//                     console.log('Succeed inserting to devices_red_alert.');
-//                     return;
-//                 }
-//             });
-//         } else {
-//             return;
-//         }
-//     }
-// }
 
 router.post('/closestShelters', function (req, res) {
     var unique_id = req.body.unique_id;
@@ -248,8 +281,7 @@ router.post('/closestShelters', function (req, res) {
         return res.status(400).send('unique_id is mandatory');
     }
 
-    //getClosestShelters(latitude, longitude, null, unique_id, res);
-    getClosestShelters(latitude, longitude, null, unique_id, function (error, message, closestCoord) {
+    getClosestShelters(latitude, longitude, null, unique_id, true, function (error, message, closestCoord) {
         if (error && error === 404) {
             return res.status(error).send(message);
         } else if (error) {
@@ -259,8 +291,6 @@ router.post('/closestShelters', function (req, res) {
                 result: closestCoord
             };
             res.status(200).send(result); // send shelter coordinates to device
-
-            return;
         }
     });
 });
@@ -279,8 +309,7 @@ router.post('/closestSheltersAfterNotification', function (req, res) {
         return res.status(400).send('red_alert_id is mandatory');
     }
 
-    //getClosestShelters(latitude, longitude, red_alert_id, unique_id, res);
-    getClosestShelters(latitude, longitude, null, unique_id, function (error, message, closestCoord, shelterId) {
+    getClosestShelters(latitude, longitude, null, unique_id, false, function (error, message, closestCoord, shelterId) {
         if (error && error === 404) {
             return res.status(error).send(message);
         } else if (error) {
@@ -292,15 +321,21 @@ router.post('/closestSheltersAfterNotification', function (req, res) {
             res.status(200).send(result); // send shelter coordinates to device
 
             // Insert information to devices_red_alert table
-            async_db.query(queries.insert_red_alert_for_user, [red_alert_id, shelterId, 0, unique_id], function (err) {
+            async_db.query(queries.select_id_by_unique_id, [unique_id], function (err, id) {
                 if (err) {
-                    console.error('Error while inserting to devices_red_alert. Error: ' + err.message);
-                    return;
+                    console.log('Error while getting device id from DB. Error: ' + err);
                 } else {
-                    console.log('Succeed inserting to devices_red_alert.');
-                    return;
+                    id = id[0].id;
+                    async_db.query(queries.insert_red_alert_for_user, [red_alert_id, shelterId, 0, id, shelterId, 0], function (err) {
+                        if (err) {
+                            console.error('Error while inserting to devices_red_alert. Error: ' + err.message);
+                        } else {
+                            console.log('Succeed inserting to devices_red_alert.');
+                        }
+                    });
                 }
             });
+
         }
     });
 });

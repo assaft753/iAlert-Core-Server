@@ -17,12 +17,12 @@ exports.select_all_approved_shelters = "SELECT * FROM shelters WHERE approved = 
 
 //------- Red alert for devices -------//
 
-exports.insert_red_alert_for_user = "INSERT INTO devices_red_alert (red_alert_id, shelter_id, arrived, device_id) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE shelter_id=? arrived=?;";
+exports.insert_red_alert_for_user = "INSERT INTO devices_red_alert (red_alert_id, shelter_id, arrived, device_id) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE shelter_id=?, arrived=?;";
 
 
 //exports.insert_red_alert_for_user = "INSERT INTO devices_red_alert (red_alert_id, shelter_id, arrived, device_id) VALUES (?,?,?,?);";
 
-exports.update_arrival_to_safe_zone = "UPDATE devices as d, devices_red_alert as s SET s.arrived = 1 WHERE d.unique_id = ? && d.id = s.device_id;";
+exports.update_arrival_to_safe_zone = "UPDATE devices as d, devices_red_alert as s SET s.arrived = 1 WHERE d.unique_id = ? && d.id = s.device_id and s.red_alert_id=?;";
 
 
 //------- Users -------//
@@ -42,7 +42,7 @@ exports.select_user_by_email = "SELECT * FROM users WHERE email = ?;";
 
 //------- Devices -------//
 
-exports.register_device = "INSERT INTO devices (unique_id) VALUES (?);";
+exports.register_device = "INSERT INTO devices (unique_id, is_android) VALUES (?,?);";
 
 exports.update_device_id = "UPDATE devices SET unique_id = ? WHERE unique_id = ?;";
 
@@ -56,6 +56,8 @@ exports.select_lat_lon_by_unique_id = "SELECT latitude,longitude FROM devices WH
 
 exports.update_preferred_language_by_unique_id = "UPDATE devices SET preferred_language=? WHERE unique_id=?;";
 
+exports.select_id_by_unique_id = "SELECT id FROM devices WHERE unique_id=?;";
+
 
 //------- Areas -------//
 
@@ -66,6 +68,8 @@ exports.select_area_code_by_city_name = "SELECT area_code FROM areas WHERE city 
 exports.select_area_id_by_city_name = "SELECT id FROM areas WHERE city = ?;";
 
 exports.select_area_id_by_area_code = "SELECT id FROM areas WHERE area_code = ?;";
+
+exports.select_max_time_by_area_code = "SELECT max_time_to_arrive_to_shelter FROM areas WHERE area_code=?;";
 
 
 //------- Red alert -------//
