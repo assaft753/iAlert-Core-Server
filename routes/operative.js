@@ -34,7 +34,7 @@ router.get('/notify', function (req, res)  {
         return res.status(400).send('area_code is mandatory');
     }
 
-    async_db.query(queries.insert_red_alert_notification, [new Date(), area_code], function (err, dbRes) {
+    async_db.query(queries.insert_red_alert_notification, [area_code], function (err, dbRes) {
         if (!helper.isEmpty(err)) {
             return res.status(500).send(err.message);
         }

@@ -74,4 +74,4 @@ exports.select_max_time_by_area_code = "SELECT max_time_to_arrive_to_shelter FRO
 
 //------- Red alert -------//
 
-exports.insert_red_alert_notification = "INSERT INTO red_alert (time, area_code) VALUES (?, ?);";
+exports.insert_red_alert_notification = "INSERT INTO red_alert (area_code) VALUES (?);";
