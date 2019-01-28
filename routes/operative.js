@@ -70,7 +70,8 @@ router.get('/notify', function (req, res)  {
                                 body: device_language_notification[''+preferred_language].body
                             },
                             data: {
-                                redAlertId: redAlertId.toString()
+                                redAlertId: redAlertId.toString(),
+                                max_time_to_arrive_to_shelter: maxTime.toString()
                             },
                             token: deviceId.toString()
                         };
@@ -93,7 +94,6 @@ router.get('/notify', function (req, res)  {
                                 .then(function (resp) {
                                     message.data['latitude'] = resp.result.latitude.toString();
                                     message.data['longitude'] = resp.result.longitude.toString();
-				                    message.data['max_time_to_arrive_to_shelter'] = maxTime.toString();
                                     sendNotification(message, deviceId);
                                 }).catch(function (err) {
                                     console.error('Could not add latitude and longitude to notification message due to error: ' + err);
