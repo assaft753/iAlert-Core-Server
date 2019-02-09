@@ -45,5 +45,6 @@ app.use(function (err, req, res, next) {
   res.status(err.status || 500);
   res.render('error');
 });
+process.env.FIREBASE_API_KEY='AIzaSyDaT0Bv4bRmnRHXm0_nzr6ooN5wjDxJEIo';
 app.listen(3000);
 module.exports = app;

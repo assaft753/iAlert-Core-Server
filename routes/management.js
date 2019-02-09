@@ -3,6 +3,8 @@ var queries = require('../queries/queries');
 var router = express.Router();
 var connection = require('../models/async-db');
 var helper = require('../models/helper');
+var fbAdmin = require('../models/iAlert-firebase');
+var TOKEN = 'iAlert_Collection_Shelters_Token';
 
 
 //------- Shelters -------//
@@ -230,6 +232,41 @@ router.get('/users', function (req, res) {
         }  else {
             return res.status(200).send(dbRes[0]);
         }
+    });
+});
+
+router.post('/users/register', function (req, res) {
+    var email = req.query.email;
+    var password = req.query.password;
+    var token = req.query.token;
+
+    if (token !== TOKEN) {
+        return res.status(401).send('Unknown token, could not register the user.');
+    }
+
+    console.log('Token is correct, check email and password validation');
+
+    if (helper.isEmpty(email)){
+        return res.status(400).send('email is mandatory');
+    }
+
+    if (helper.isEmpty(password)){
+        return res.status(400).send('password is mandatory');
+    }
+
+    console.log('Start registering the user with email: ' + email);
+
+    fbAdmin.auth().createUser({
+        email: email,
+        emailVerified: false,
+        password: password,
+        disabled: false
+    }).then(function(userRecord) {
+        console.log("Successfully created new user:", userRecord.uid);
+        return res.status(200).send(userRecord);
+    }).catch(function (error) {
+        console.error('Could not create user for email: ' + email + ' due to error: ' + error);
+        return res.status(500).send(error.message);
     });
 });
 
