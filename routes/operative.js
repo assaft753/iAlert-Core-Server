@@ -6,6 +6,9 @@ var queries = require('../queries/queries');
 var fbAdmin = require('../models/iAlert-firebase');
 var device_language_notification = require('./device_language_notification');
 var rp = require('request-promise');
+var log4js = require('log4js');
+var Logger = log4js.getLogger('[Operative]');
+Logger.level = 'debug';
 
 router.get('/notify', function (req, res)  {
 
@@ -16,13 +19,13 @@ router.get('/notify', function (req, res)  {
         fbAdmin.messaging()
             .send(message)
             .then(function (data) {
-                console.log('Successfully sent message: ' + data + ', to deviceId: ' + deviceId);
+                Logger.info('Successfully sent message: ' + data + ', to deviceId: ' + deviceId);
             }).catch(function (err) {
-            console.log('Error sending message:', err);
+            Logger.error('Could not notify to device. Error while sending message:', err);
         });
     }
     catch (err) {
-            console.log('Error sending message:', err);
+            Logger.error('Could not notify to device. Error while sending message:', err);
         }
 
     }
@@ -31,19 +34,23 @@ router.get('/notify', function (req, res)  {
 
     var area_code = req.query.area_code;
     if (helper.isEmpty(area_code)) {
+        Logger.error('Could not notify to device. Error: area_code is mandatory');
         return res.status(400).send('area_code is mandatory');
     }
 
     async_db.query(queries.insert_red_alert_notification, [area_code], function (err, dbRes) {
         if (!helper.isEmpty(err)) {
+            Logger.error(err.stack);
             return res.status(500).send(err.message);
         }
         if (dbRes['affectedRows'] === 0) {
+            Logger.error('Could not notify to device. Error: No rows were inserted to DB');
             return res.status(500).send('No rows were inserted to DB');
         }
 
         async_db.query(queries.select_max_time_by_area_code, [area_code], function (err, maxTime) {
             if (err) {
+                Logger.error(err.stack);
                 return res.status(500).send(err);
             }
 
@@ -51,6 +58,7 @@ router.get('/notify', function (req, res)  {
             var redAlertId = dbRes['insertId'];
             async_db.query(queries.select_devices_by_area_code, [area_code], function (err, devices) {
                 if (!helper.isEmpty(err)) {
+                    Logger.error(err.stack);
                     return res.status(500).send(err);
                 }
 
@@ -96,7 +104,7 @@ router.get('/notify', function (req, res)  {
                                     message.data['longitude'] = resp.result.longitude.toString();
                                     sendNotification(message, deviceId);
                                 }).catch(function (err) {
-                                    console.error('Could not add latitude and longitude to notification message due to error: ' + err);
+                                    Logger.error('Could not add latitude and longitude to notification message due to error: ' + err);
                                 }
                             );
                         } else {
@@ -117,15 +125,18 @@ router.post('/arrive', function (req, res) {
     var unique_id = req.body['unique_id'];
 
     if (helper.isEmpty(redAlertId)) {
+        Logger.error('Could not set device to arrived. Error: Red alert id is mandatory');
         return res.status(400).send('Red alert id is mandatory');
     }
 
     if (helper.isEmpty(unique_id)) {
+        Logger.error('Could not set device to arrived. Error: Device id is mandatory');
         return res.status(400).send('Device id is mandatory');
     }
 
     async_db.query(queries.update_arrival_to_safe_zone, [unique_id, redAlertId], function (err) {
         if (!helper.isEmpty(err)) {
+            Logger.error(err.stack);
             return res.status(500).send(err.message);
         }
 
@@ -209,9 +220,9 @@ function getClosestShelters(latitude, longitude, red_alert_id, unique_id, getAll
         // select lat lon by unique id from users
         async_db.query(queries.select_lat_lon_by_unique_id, [unique_id], function (coordErr, coordRes) {
             if (coordErr) {
-                return res.status(500).send(coordErr.message);
+                return cb(500, coordErr);
             } else if (helper.isEmpty(coordRes)) {
-                return res.status(404).send('Could not find coordinates for unique_id: ' + unique_id);
+                return cb(404, 'Could not find coordinates for unique_id: ' + unique_id);
             } else {
                 latitude = coordRes[0].latitude;
                 longitude = coordRes[0].longitude;
@@ -241,7 +252,7 @@ function selectClosestShelters(latitude, longitude, getAll, cb) {
     // query the DB
     async_db.query(query, function (err, closestShelterArr) {
         if (err) {
-            return cb(err);
+            return cb(500, err);
         } else if (helper.isEmpty(closestShelterArr)) {
             return cb(404, 'Could not find closest shelter for (latitude, longitude) = (' + latitude + ', ' + longitude + ')');
         } else if (getAll) {
@@ -278,15 +289,23 @@ router.post('/closestShelters', function (req, res) {
     var longitude = req.body.longitude;
 
     if (helper.isEmpty(unique_id)) {
+        Logger.error('Could not get closest shelter. Error: unique_id is mandatory');
         return res.status(400).send('unique_id is mandatory');
     }
 
-    getClosestShelters(latitude, longitude, null, unique_id, true, function (error, message, closestCoord) {
-        if (error && error === 404) {
-            return res.status(error).send(message);
-        } else if (error) {
-            return res.status(500).send(error.message);
-        } else {
+    getClosestShelters(latitude, longitude, null, unique_id, true, function (errorCode, error, closestCoord) {
+        var errorMessage;
+        if (errorCode) {
+            if (error && error.message) {
+                errorMessage = error.message;
+
+            } else {
+                errorMessage = error;
+            }
+            Logger.error('Could not get closest shelter. Error: ' + errorMessage);
+            return res.status(errorCode).send(errorMessage);
+
+        }  else {
             var result = {
                 result: closestCoord
             };
@@ -302,18 +321,26 @@ router.post('/closestSheltersAfterNotification', function (req, res) {
     var red_alert_id = req.body.red_alert_id;
 
     if (helper.isEmpty(unique_id)) {
+        Logger.error('Could not get closest shelter (after notification). Error: unique_id is mandatory');
         return res.status(400).send('unique_id is mandatory');
     }
 
     if (helper.isEmpty(red_alert_id)) {
+        Logger.error('Could not get closest shelter (after notification). Error: red_alert_id is mandatory');
         return res.status(400).send('red_alert_id is mandatory');
     }
 
-    getClosestShelters(latitude, longitude, null, unique_id, false, function (error, message, closestCoord, shelterId) {
-        if (error && error === 404) {
-            return res.status(error).send(message);
-        } else if (error) {
-            return res.status(500).send(error.message);
+    getClosestShelters(latitude, longitude, null, unique_id, false, function (errorCode, error, closestCoord, shelterId) {
+        var errorMessage;
+        if (errorCode) {
+            if (error && error.message) {
+                errorMessage = error.message;
+
+            } else {
+                errorMessage = error;
+            }
+            Logger.error('Could not get closest shelter (after notification). Error: ' + errorMessage);
+            return res.status(errorCode).send(errorMessage);
         } else {
             var result = {
                 result: closestCoord
@@ -323,14 +350,14 @@ router.post('/closestSheltersAfterNotification', function (req, res) {
             // Insert information to devices_red_alert table
             async_db.query(queries.select_id_by_unique_id, [unique_id], function (err, id) {
                 if (err) {
-                    console.log('Error while getting device id from DB. Error: ' + err);
+                    Logger.error('Error while getting device id from DB. Error: ' + err);
                 } else {
                     id = id[0].id;
                     async_db.query(queries.insert_red_alert_for_user, [red_alert_id, shelterId, 0, id, shelterId, 0], function (err) {
                         if (err) {
-                            console.error('Error while inserting to devices_red_alert. Error: ' + err.message);
+                            Logger.error('Error while inserting to devices_red_alert. Error: ' + err.message);
                         } else {
-                            console.log('Succeed inserting to devices_red_alert.');
+                            Logger.info('Successfully insert to devices_red_alert.');
                         }
                     });
                 }
