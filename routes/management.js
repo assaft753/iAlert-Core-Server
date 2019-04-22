@@ -376,7 +376,7 @@ router.post('/areas/preferred', function (req, res) {
         if (err) {
             Logger.error(err.stack);
             return res.status(500).send(err.message);
-        } else if (helper.isEmpty(area_code)) {
+        } else if (helper.isEmpty(area_code) || helper.isEmpty(area_code[0].area_code)) {
             var errMsg = 'Could not add preferred area for device. Error: could not find area_code for city name: ' + lowerCaseCity;
             Logger.error(errMsg);
             return res.status(404).send(errMsg);
@@ -385,12 +385,12 @@ router.post('/areas/preferred', function (req, res) {
                 if (err) {
                     Logger.error(err.stack);
                     return res.status(500).send(err.message);
-                } else if (helper.isEmpty(device_id)) {
+                } else if (helper.isEmpty(device_id) || helper.isEmpty(device_id[0].id)) {
                     var errMsg = 'Could not add preferred area for device. Error: could not find device_id for unique_id: ' + unique_id;
                     Logger.error(errMsg);
                     return res.status(404).send(errMsg);
                 } else {
-                    connection.query(queries.insert_preferred_areas_for_device, [device_id[0].id, area_code], function (err, dbRes) {
+                    connection.query(queries.insert_preferred_areas_for_device, [device_id[0].id, area_code[0].area_code], function (err, dbRes) {
                         if (err) {
                             Logger.error(err.stack);
                             return res.status(500).send(err.message);
@@ -417,7 +417,7 @@ router.get('/areas/preferred', function (req, res) {
         if (err) {
             Logger.error(err.stack);
             return res.status(500).send(err.message);
-        } else if (helper.isEmpty(device_id[0].id)) {
+        } else if (helper.isEmpty(device_id) || helper.isEmpty(device_id[0].id)) {
             var errMsg = 'Could not get preferred areas for device. Error: could not find device_id for unique_id: ' + unique_id;
             Logger.error(errMsg);
             return res.status(404).send(errMsg);
@@ -448,7 +448,7 @@ router.delete('/areas/allPreferred', function (req, res) {
         if (err) {
             Logger.error(err.stack);
             return res.status(500).send(err.message);
-        } else if (helper.isEmpty(device_id[0].id)) {
+        } else if (helper.isEmpty(device_id) || helper.isEmpty(device_id[0].id)) {
             var errMsg = 'Could not delete all preferred areas for device. Error: could not find device_id for unique_id: ' + unique_id;
             Logger.error(errMsg);
             return res.status(404).send(errMsg);
@@ -485,7 +485,7 @@ router.delete('/areas/OnePreferred', function (req, res) {
         if (err) {
             Logger.error(err.stack);
             return res.status(500).send(err.message);
-        } else if (helper.isEmpty(area_code)) {
+        } else if (helper.isEmpty(area_code) || helper.isEmpty(area_code[0].area_code)) {
             var errMsg = 'Could not delete preferred area for device. Error: could not find area_code for city name: ' + lowerCaseCity;
             Logger.error(errMsg);
             return res.status(404).send(errMsg);
@@ -494,12 +494,12 @@ router.delete('/areas/OnePreferred', function (req, res) {
                 if (err) {
                     Logger.error(err.stack);
                     return res.status(500).send(err.message);
-                } else if (helper.isEmpty(device_id[0].id)) {
+                } else if (helper.isEmpty(device_id) || helper.isEmpty(device_id[0].id)) {
                     var errMsg = 'Could not delete preferred area for device. Error: could not find device_id for unique_id: ' + unique_id;
                     Logger.error(errMsg);
                     return res.status(404).send(errMsg);
                 } else {
-                    connection.query(queries.delete_preferred_area_for_device, [device_id[0].id, area_code], function (err, dbRes) {
+                    connection.query(queries.delete_preferred_area_for_device, [device_id[0].id, area_code[0].area_code], function (err, dbRes) {
                         if (err) {
                             Logger.error(err.stack);
                             return res.status(500).send(err.message);
