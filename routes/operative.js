@@ -21,11 +21,11 @@ router.get('/notify', function (req, res)  {
             .then(function (data) {
                 Logger.info('Successfully sent message: ' + data + ', to deviceId: ' + deviceId);
             }).catch(function (err) {
-            Logger.error('Could not notify to device. Error while sending message:', err);
+            Logger.error('Could not notify to deviceId: ' + deviceId + '\n Error while sending message:', err);
         });
     }
     catch (err) {
-            Logger.error('Could not notify to device. Error while sending message:', err);
+            Logger.error('Could not notify to deviceId: ' + deviceId + '\n Error while sending message:', err);
         }
 
     }

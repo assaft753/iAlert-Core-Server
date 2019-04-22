@@ -357,4 +357,161 @@ router.get('/areas', function (req, res) {
     });
 });
 
+router.post('/areas/preferred', function (req, res) {
+    var city = req.body.city ? req.body.city : '';
+    var unique_id = req.body.unique_id ? req.body.unique_id : '';
+
+    if (helper.isEmpty(city)) {
+        Logger.error('Could not add preferred area for device. Error: city is mandatory');
+        return res.status(400).send('city is mandatory');
+    }
+
+    if (helper.isEmpty(unique_id)) {
+        Logger.error('Could not add preferred area for device. Error: unique_id is mandatory');
+        return res.status(400).send('unique_id is mandatory');
+    }
+
+    var lowerCaseCity = city.toLowerCase();
+    connection.query(queries.select_area_code_by_city_name, [lowerCaseCity], function (err, area_code) {
+        if (err) {
+            Logger.error(err.stack);
+            return res.status(500).send(err.message);
+        } else if (helper.isEmpty(area_code)) {
+            var errMsg = 'Could not add preferred area for device. Error: could not find area_code for city name: ' + lowerCaseCity;
+            Logger.error(errMsg);
+            return res.status(404).send(errMsg);
+        } else {
+            connection.query(queries.select_device, [unique_id], function (err, device_id) {
+                if (err) {
+                    Logger.error(err.stack);
+                    return res.status(500).send(err.message);
+                } else if (helper.isEmpty(device_id)) {
+                    var errMsg = 'Could not add preferred area for device. Error: could not find device_id for unique_id: ' + unique_id;
+                    Logger.error(errMsg);
+                    return res.status(404).send(errMsg);
+                } else {
+                    connection.query(queries.insert_preferred_areas_for_device, [device_id, area_code], function (err, dbRes) {
+                        if (err) {
+                            Logger.error(err.stack);
+                            return res.status(500).send(err.message);
+                        } else {
+                            Logger.info('Successfully added preferred area: city: ' + city + ' for unique_id: ' + unique_id);
+                            return res.status(200).send(dbRes);
+                        }
+                    });
+                }
+            });
+        }
+    });
+});
+
+router.get('/areas/preferred', function (req, res) {
+    var unique_id = req.query.unique_id ? req.query.unique_id : '';
+
+    if (helper.isEmpty(unique_id)) {
+        Logger.error('Could not get preferred areas for device. Error: unique_id is mandatory');
+        return res.status(400).send('unique_id is mandatory');
+    }
+
+    connection.query(queries.select_device, [unique_id], function (err, device_id) {
+        if (err) {
+            Logger.error(err.stack);
+            return res.status(500).send(err.message);
+        } else if (helper.isEmpty(device_id)) {
+            var errMsg = 'Could not get preferred areas for device. Error: could not find device_id for unique_id: ' + unique_id;
+            Logger.error(errMsg);
+            return res.status(404).send(errMsg);
+        } else {
+            connection.query(queries.select_preferred_areas_for_device, [device_id], function (err, dbRes) {
+                if (err) {
+                    Logger.error(err.stack);
+                    return res.status(500).send(err.message);
+                } else {
+                    Logger.info('Successfully get preferred areas for unique_id: ' + unique_id);
+                    return res.status(200).send(dbRes);
+                }
+            });
+        }
+    });
+});
+
+
+router.delete('/areas/allPreferred', function (req, res) {
+    var unique_id = req.query.unique_id ? req.query.unique_id : '';
+
+    if (helper.isEmpty(unique_id)) {
+        Logger.error('Could not delete all preferred areas for device. Error: unique_id is mandatory');
+        return res.status(400).send('unique_id is mandatory');
+    }
+
+    connection.query(queries.select_device, [unique_id], function (err, device_id) {
+        if (err) {
+            Logger.error(err.stack);
+            return res.status(500).send(err.message);
+        } else if (helper.isEmpty(device_id)) {
+            var errMsg = 'Could not delete all preferred areas for device. Error: could not find device_id for unique_id: ' + unique_id;
+            Logger.error(errMsg);
+            return res.status(404).send(errMsg);
+        } else {
+            connection.query(queries.delete_all_preferred_area_for_device, [device_id], function (err, dbRes) {
+                if (err) {
+                    Logger.error(err.stack);
+                    return res.status(500).send(err.message);
+                } else {
+                    Logger.info('Successfully deleted all preferred areas for unique_id: ' + unique_id);
+                    return res.status(200).send(dbRes);
+                }
+            });
+        }
+    });
+});
+
+router.delete('/areas/OnePreferred', function (req, res) {
+    var unique_id = req.query.unique_id ? req.query.unique_id : '';
+    var city = req.query.city ? req.query.city : '';
+
+    if (helper.isEmpty(city)) {
+        Logger.error('Could not delete preferred area for device. Error: city is mandatory');
+        return res.status(400).send('city is mandatory');
+    }
+
+    if (helper.isEmpty(unique_id)) {
+        Logger.error('Could not delete preferred area for device. Error: unique_id is mandatory');
+        return res.status(400).send('unique_id is mandatory');
+    }
+
+    var lowerCaseCity = city.toLowerCase();
+    connection.query(queries.select_area_code_by_city_name, [lowerCaseCity], function (err, area_code) {
+        if (err) {
+            Logger.error(err.stack);
+            return res.status(500).send(err.message);
+        } else if (helper.isEmpty(area_code)) {
+            var errMsg = 'Could not delete preferred area for device. Error: could not find area_code for city name: ' + lowerCaseCity;
+            Logger.error(errMsg);
+            return res.status(404).send(errMsg);
+        } else {
+            connection.query(queries.select_device, [unique_id], function (err, device_id) {
+                if (err) {
+                    Logger.error(err.stack);
+                    return res.status(500).send(err.message);
+                } else if (helper.isEmpty(device_id)) {
+                    var errMsg = 'Could not delete preferred area for device. Error: could not find device_id for unique_id: ' + unique_id;
+                    Logger.error(errMsg);
+                    return res.status(404).send(errMsg);
+                } else {
+                    connection.query(queries.delete_preferred_area_for_device, [device_id, area_code], function (err, dbRes) {
+                        if (err) {
+                            Logger.error(err.stack);
+                            return res.status(500).send(err.message);
+                        } else {
+                            Logger.info('Successfully deleted preferred area: city: ' + city + ' for unique_id: ' + unique_id);
+                            return res.status(200).send(dbRes);
+                        }
+                    });
+                }
+            });
+        }
+    });
+});
+
 module.exports = router;

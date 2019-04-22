@@ -46,7 +46,7 @@ exports.register_device = "INSERT INTO devices (unique_id, is_android) VALUES (?
 
 exports.update_device_id = "UPDATE devices SET unique_id = ? WHERE unique_id = ?;";
 
-exports.select_device = "SELECT * FROM devices WHERE unique_id = ?;";
+exports.select_device = "SELECT id FROM devices WHERE unique_id = ?;";
 
 exports.update_device = "UPDATE devices SET latitude = ?, longitude = ?, area_code = ?, disable = 0, preferred_language=? WHERE unique_id = ?;";
 
@@ -70,6 +70,14 @@ exports.select_area_id_by_city_name = "SELECT id FROM areas WHERE city = ?;";
 exports.select_area_id_by_area_code = "SELECT id FROM areas WHERE area_code = ?;";
 
 exports.select_max_time_by_area_code = "SELECT max_time_to_arrive_to_shelter FROM areas WHERE area_code=?;";
+
+exports.insert_preferred_areas_for_device = "INSERT INTO preferred_area_code_for_device_id (device_id, area_code) VALUES (?, ?);";
+
+exports.select_preferred_areas_for_device = "SELECT area_code FROM preferred_area_code_for_device_id WHERE device_id = ?;";
+
+exports.delete_preferred_area_for_device = "DELETE FROM preferred_areas_for_device WHERE device_id=? AND area_code=?;";
+
+exports.delete_all_preferred_area_for_device = "DELETE FROM preferred_areas_for_device WHERE device_id=?;";
 
 
 //------- Red alert -------//
