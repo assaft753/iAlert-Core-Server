@@ -75,9 +75,9 @@ exports.insert_preferred_areas_for_device = "INSERT INTO preferred_area_code_for
 
 exports.select_preferred_areas_for_device = "SELECT area_code FROM preferred_area_code_for_device_id WHERE device_id = ?;";
 
-exports.delete_preferred_area_for_device = "DELETE FROM preferred_areas_for_device WHERE device_id=? AND area_code=?;";
+exports.delete_preferred_area_for_device = "DELETE FROM preferred_area_code_for_device_id WHERE device_id=? AND area_code=?;";
 
-exports.delete_all_preferred_area_for_device = "DELETE FROM preferred_areas_for_device WHERE device_id=?;";
+exports.delete_all_preferred_area_for_device = "DELETE FROM preferred_area_code_for_device_id WHERE device_id=?;";
 
 
 //------- Red alert -------//
