@@ -85,6 +85,10 @@ exports.select_all_device_ids_by_area_code = "SELECT device_id FROM preferred_ar
 
 exports.select_city_by_area_code = "SELECT city FROM areas WHERE area_code=?;";
 
+exports.select_all_areas = "SELECT * FROM areas;";
+
+exports.select_area_by_area_code = 'SELECT * FROM areas WHERE area_code=?;';
+
 //------- Red alert -------//
 
 exports.insert_red_alert_notification = "INSERT INTO red_alert (area_code) VALUES (?);";

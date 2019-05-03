@@ -377,15 +377,53 @@ router.post('/areas', function (req, res) {
         return res.status(400).send('city must contains letters');
     }
 
-    connection.query(queries.insert_areas, [areaCode, cityName, maxTime], function (err, dbRes) {
+    // Check if area_code is already exists in table
+    connection.query(queries.select_area_by_area_code, [areaCode], function (err, dbRes) {
         if (err) {
             Logger.error(err.stack);
             return res.status(500).send(err.message);
+        } else if (helper.isEmpty(dbRes)) {
+            // Insert new area
+            connection.query(queries.insert_areas, [areaCode, cityName, maxTime], function (err, dbRes) {
+                if (err) {
+                    Logger.error(err.stack);
+                    return res.status(500).send(err.message);
+                } else {
+                    Logger.info('Create area successfully');
+                    return res.status(200).send(dbRes);
+                }
+            });
         } else {
-            Logger.info('Create area successfully');
-            return res.status(200).send(dbRes);
+            // parse city to array
+            var area = dbRes[0];
+            var cities = area.city;
+            Logger.debug('type of cities = ' + typeof cities);
+            Logger.debug('cities = ' + cities);
+            cities = JSON.parse(cities);
+            Logger.debug('type of cities after parse = ' + typeof cities);
+            Logger.debug('cities after parse = ' + cities);
+            // check if city is already exists in the array
+            // if exists -> send message exists
+            // else update city array + convert to string and save it to DB
         }
-    });
+    })
+
+
+});
+
+router.get('/areas/getAll', function (req, res) {
+   connection.query(queries.select_all_areas, [], function (err, dbRes) {
+       if (err) {
+           Logger.error(err.stack);
+           return res.status(500).send(err.message);
+       } else if (helper.isEmpty(dbRes)) {
+           Logger.error('Could not get all areas. Error: Could not find any area');
+           return res.status(404).send('Could not find any area');
+       } else {
+           Logger.info('Get all areas successfully');
+           return res.status(200).send(dbRes);
+       }
+   })
 });
 
 router.get('/areas', function (req, res) {
