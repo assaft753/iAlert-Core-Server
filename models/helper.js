@@ -18,3 +18,10 @@ exports.degreeToXY = function (lat, lon) {
 
     return { 'x': x, 'y': y };
 };
+
+exports.convertCityName = function (city) {
+    var regex = new RegExp('[^a-zA-Z]', 'g');
+    city = city.replace(regex, '');
+    city = city.toLowerCase();
+    return city;
+};

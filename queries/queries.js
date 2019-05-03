@@ -58,10 +58,12 @@ exports.update_preferred_language_by_unique_id = "UPDATE devices SET preferred_l
 
 exports.select_id_by_unique_id = "SELECT id FROM devices WHERE unique_id=?;";
 
+exports.select_all_devices_with_ids_in_array = "SELECT * FROM devices WHERE id IN (?);";
+
 
 //------- Areas -------//
 
-exports.insert_areas = "INSERT INTO areas (area_code, city) VALUES (?, ?);";
+exports.insert_areas = "INSERT INTO areas (area_code, city, max_time_to_arrive_to_shelter) VALUES (?, ?, ?);";
 
 exports.select_area_code_by_city_name = "SELECT area_code FROM areas WHERE city = ?;";
 
@@ -79,6 +81,9 @@ exports.delete_preferred_area_for_device = "DELETE FROM preferred_area_code_for_
 
 exports.delete_all_preferred_area_for_device = "DELETE FROM preferred_area_code_for_device_id WHERE device_id=?;";
 
+exports.select_all_device_ids_by_area_code = "SELECT device_id FROM preferred_area_code_for_device_id WHERE area_code=?;";
+
+exports.select_city_by_area_code = "SELECT city FROM areas WHERE area_code=?;";
 
 //------- Red alert -------//
 

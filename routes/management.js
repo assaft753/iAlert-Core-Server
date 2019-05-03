@@ -31,46 +31,63 @@ router.get('/shelters', function (req, res) {
 });
 
 router.get('/shelters/safeZones', function (req, res) {
-    var area_code = req.query.area_code;
-    if (helper.isEmpty(area_code)) {
+    var areaCode = req.query.area_code;
+    if (helper.isEmpty(areaCode)) {
         Logger.error('Could not get shelters safe zone. Error: area_code is mandatory');
         return res.status(400).send('area_code is mandatory');
     }
 
-    area_code = parseInt(area_code, 10);
-    connection.query(queries.select_shelters_by_location, [area_code], function (err, dbRes) {
+    areaCode = parseInt(areaCode, 10);
+    connection.query(queries.select_shelters_by_location, [areaCode], function (err, dbRes) {
         if (err) {
             Logger.error(err.stack);
             return res.status(500).send(err.message);
         } else if (helper.isEmpty(dbRes)) {
-            Logger.error('Could not get shelters safe zone. Error: Could not find any shelter with area code: ' + area_code);
-            return res.status(404).send('Could not find any shelter with area code: ' + area_code);
+            Logger.error('Could not get shelters safe zone. Error: Could not find any shelter with area code: ' + areaCode);
+            return res.status(404).send('Could not find any shelter with area code: ' + areaCode);
         } else {
             var result = {
                 result: dbRes
             };
-            Logger.info('Get shelters for safe zone with area code: ' + area_code + ' successfully');
+            Logger.info('Get shelters for safe zone with area code: ' + areaCode + ' successfully');
             return res.status(200).send(result);
         }
     });
 });
 
 router.post('/shelters', function (req, res) {
-    var city = req.body.city ? req.body.city : '';
-    var user_email = req.body.user_email ? req.body.user_email : 0;
+    var city = req.body.city;
+    var userEmail = req.body.user_email;
     var latitude = req.body.latitude ? req.body.latitude : 0;
     var longitude = req.body.longitude ? req.body.longitude : 0;
     var address = req.body.address ? req.body.address : '';
 
-    connection.query(queries.select_area_code_by_city_name, [city.toLowerCase()], function (err, area_code) {
+    if (helper.isEmpty(city)) {
+        Logger.error('Could not post shelter. Error: city is mandatory');
+        return res.status(400).send('city is mandatory');
+    }
+
+    if (helper.isEmpty(userEmail)) {
+        Logger.error('Could not post shelter. Error: user_email is mandatory');
+        return res.status(400).send('user_email is mandatory');
+    }
+
+    var cityName = helper.convertCityName(city);
+
+    if (helper.isEmpty(cityName)) {
+        Logger.error('Could not post shelter. Error: city must contains letters');
+        return res.status(400).send('city must contains letters');
+    }
+
+    connection.query(queries.select_area_code_by_city_name, [cityName], function (err, areaCode) {
         if (err) {
             Logger.error(err.stack);
             return res.status(500).send(err.message);
-        } else if (helper.isEmpty(area_code)){
-            Logger.error('Could not create shelters. Error: Could not find any area for city: ' + city);
-            return res.status(404).send('Could not find any area for city: ' + city);
+        } else if (helper.isEmpty(areaCode)){
+            Logger.error('Could not create shelters. Error: Could not find any area for city: ' + cityName);
+            return res.status(404).send('Could not find any area for city: ' + cityName);
         } else {
-            area_code = area_code[0].area_code;
+            areaCode = areaCode[0].area_code;
             connection.query(queries.select_all_by_lat_lon, [latitude, longitude], function (err, dbRes) {
                 if (err) {
                     Logger.error(err.stack);
@@ -79,7 +96,7 @@ router.post('/shelters', function (req, res) {
                     Logger.info('This shelter in latitude = ' + latitude + ' and longitude = ' + longitude + ' already exists in DB');
                     return res.status(200).send('This shelter in latitude = ' + latitude + ' and longitude = ' + longitude + ' already exists in DB');
                 } else {
-                    connection.query(queries.insert_shelter, [area_code, user_email, latitude, longitude, address], function (err, dbRes) {
+                    connection.query(queries.insert_shelter, [areaCode, userEmail, latitude, longitude, address], function (err, dbRes) {
                         if (err) {
                             Logger.error(err.stack);
                             return res.status(500).send(err.message);
@@ -139,26 +156,27 @@ router.delete('/shelters', function (req, res) {
 //------- Devices -------//
 
 router.get('/devices', function (req, res) {
-    var area_code = req.query.area_code;
-    if (helper.isEmpty(area_code)) {
+    var areaCode = req.query.area_code;
+
+    if (helper.isEmpty(areaCode)) {
         Logger.error('Could not get devices. Error: area_code is mandatory');
         return res.status(400).send('area_code is mandatory');
     }
 
-    area_code = parseInt(area_code, 10);
-    connection.query(queries.select_devices_by_area_code, [area_code], function (err, dbRes) {
+    areaCode = parseInt(areaCode, 10);
+    connection.query(queries.select_devices_by_area_code, [areaCode], function (err, dbRes) {
         if (err) {
             Logger.error(err.stack);
             return res.status(500).send(err.message);
         } else if (helper.isEmpty(dbRes)) {
-            Logger.error('Could not get devices. Error: Could not find any device with area code: ' + area_code);
-            return res.status(404).send('Could not find any device with area code: ' + area_code);
+            Logger.error('Could not get devices. Error: Could not find any device with area code: ' + areaCode);
+            return res.status(404).send('Could not find any device with area code: ' + areaCode);
         }  else {
             var result = {
                 result: dbRes
             };
 
-            Logger.info('Get devices in area code: ' + area_code + ' successfully');
+            Logger.info('Get devices in area code: ' + areaCode + ' successfully');
             return res.status(200).send(result);
         }
     });
@@ -168,13 +186,18 @@ router.get('/devices', function (req, res) {
 //------- Users -------//
 
 router.post('/users/withPoints', function (req, res) {
-    var email = req.body.email ? req.body.email : '';
+    var email = req.body.email;
     var admin = req.body.admin ? req.body.admin : false;
-    var points_approved = req.body.points_approved ? req.body.points_approved : 0;
-    var points_collected = req.body.points_collected ? req.body.points_collected : 0;
-    var points_declined = req.body.points_declined ? req.body.points_declined : 0;
+    var pointsApproved = req.body.points_approved ? req.body.points_approved : 0;
+    var pointsCollected = req.body.points_collected ? req.body.points_collected : 0;
+    var pointsDeclined = req.body.points_declined ? req.body.points_declined : 0;
 
-    connection.query(queries.insert_user_with_points, [email, admin, points_approved, points_collected, points_declined]
+    if (helper.isEmpty(email)) {
+        Logger.error('Could not post user with points. Error: email is mandatory');
+        return res.status(400).send('email is mandatory');
+    }
+
+    connection.query(queries.insert_user_with_points, [email, admin, pointsApproved, pointsCollected, pointsDeclined]
         , function (err, dbRes) {
             if (err) {
                 Logger.error(err.stack);
@@ -187,8 +210,13 @@ router.post('/users/withPoints', function (req, res) {
 });
 
 router.post('/users', function (req, res) {
-    var email = req.body.email ? req.body.email : '';
+    var email = req.body.email;
     var admin = req.body.admin ? req.body.admin : false;
+
+    if (helper.isEmpty(email)) {
+        Logger.error('Could not post user. Error: email is mandatory');
+        return res.status(400).send('email is mandatory');
+    }
 
     connection.query(queries.insert_user, [email, admin], function ( err, dbRes ) {
         if (err) {
@@ -260,6 +288,7 @@ router.put('/users/points_declined', function (req, res) {
 
 router.get('/users', function (req, res) {
     var email = req.query.email;
+
     if (helper.isEmpty(email)) {
         Logger.error('Could not get user. Error: email is mandatory');
         return res.status(400).send('email is mandatory');
@@ -289,7 +318,7 @@ router.post('/users/register', function (req, res) {
         return res.status(401).send('Unknown token, could not register the user.');
     }
 
-    Logger.info('Token is correct, check email and password validation');
+    Logger.info('Token is correct, validating email and password is not empty');
 
     if (helper.isEmpty(email)){
         Logger.error('Could not register user. Error: email is mandatory');
@@ -322,10 +351,33 @@ router.post('/users/register', function (req, res) {
 //------- Areas -------//
 
 router.post('/areas', function (req, res) {
-    var area_code = req.body.area_code ? req.body.area_code : -1;
-    var city = req.body.city ? req.body.city : '';
+    var areaCode = req.body.area_code;
+    var city = req.body.city;
+    var maxTime = req.body.max_time_to_arrive_to_shelter;
 
-    connection.query(queries.insert_areas, [area_code, city.toLowerCase()], function (err, dbRes) {
+    if (helper.isEmpty(areaCode)) {
+        Logger.error('Could not post area. Error: area_code is mandatory');
+        return res.status(400).send('area_code is mandatory');
+    }
+
+    if (helper.isEmpty(city)) {
+        Logger.error('Could not post area. Error: city is mandatory');
+        return res.status(400).send('city is mandatory');
+    }
+
+    if (helper.isEmpty(maxTime)) {
+        Logger.error('Could not post area. Error: max_time_to_arrive_to_shelter is mandatory');
+        return res.status(400).send('max_time_to_arrive_to_shelter is mandatory');
+    }
+
+    var cityName = helper.convertCityName(city);
+
+    if (helper.isEmpty(cityName)) {
+        Logger.error('Could not post shelter. Error: city must contains letters');
+        return res.status(400).send('city must contains letters');
+    }
+
+    connection.query(queries.insert_areas, [areaCode, cityName, maxTime], function (err, dbRes) {
         if (err) {
             Logger.error(err.stack);
             return res.status(500).send(err.message);
@@ -338,54 +390,62 @@ router.post('/areas', function (req, res) {
 
 router.get('/areas', function (req, res) {
     var city = req.query.city;
+
     if (helper.isEmpty(city)) {
         Logger.error('Could not get area. Error: city is mandatory');
         return res.status(400).send('city is mandatory');
     }
 
-    connection.query(queries.select_area_code_by_city_name, [city.toLowerCase()], function ( err, dbRes ) {
+    var cityName = helper.convertCityName(city);
+
+    if (helper.isEmpty(cityName)) {
+        Logger.error('Could not post shelter. Error: city must contains letters');
+        return res.status(400).send('city must contains letters');
+    }
+
+    connection.query(queries.select_area_code_by_city_name, [cityName], function ( err, dbRes ) {
         if (err) {
             Logger.error(err.stack);
             return res.status(500).send(err.message);
         } else if (helper.isEmpty(dbRes)) {
-            Logger.error('Could not get area. Error: Could not find any area for city name: ' + city.toLowerCase());
-            return res.status(404).send('Could not find any area for city name: ' + city.toLowerCase());
+            Logger.error('Could not get area. Error: Could not find any area for city name: ' + cityName);
+            return res.status(404).send('Could not find any area for city name: ' + cityName);
         } else {
-            Logger.info('Get area for city: ' + city.toLowerCase() + ' successfully');
+            Logger.info('Get area for city: ' + cityName + ' successfully');
             return res.status(200).send(dbRes[0]);
         }
     });
 });
 
 router.post('/areas/preferred', function (req, res) {
-    var area_code = req.body.area_code ? req.body.area_code : '';
-    var unique_id = req.body.unique_id ? req.body.unique_id : '';
+    var areaCode = req.body.area_code;
+    var uniqueId = req.body.unique_id;
 
-    if (helper.isEmpty(area_code)) {
+    if (helper.isEmpty(areaCode)) {
         Logger.error('Could not add preferred area for device. Error: area_code is mandatory');
         return res.status(400).send('area_code is mandatory');
     }
 
-    if (helper.isEmpty(unique_id)) {
+    if (helper.isEmpty(uniqueId)) {
         Logger.error('Could not add preferred area for device. Error: unique_id is mandatory');
         return res.status(400).send('unique_id is mandatory');
     }
 
-    connection.query(queries.select_device, [unique_id], function (err, device_id) {
+    connection.query(queries.select_device, [uniqueId], function (err, deviceId) {
         if (err) {
             Logger.error(err.stack);
             return res.status(500).send(err.message);
-        } else if (helper.isEmpty(device_id) || helper.isEmpty(device_id[0].id)) {
-            var errMsg = 'Could not add preferred area for device. Error: could not find device_id for unique_id: ' + unique_id;
+        } else if (helper.isEmpty(deviceId) || helper.isEmpty(deviceId[0].id)) {
+            var errMsg = 'Could not add preferred area for device. Error: could not find device_id for unique_id: ' + uniqueId;
             Logger.error(errMsg);
             return res.status(404).send(errMsg);
         } else {
-            connection.query(queries.insert_preferred_areas_for_device, [device_id[0].id, area_code], function (err, dbRes) {
+            connection.query(queries.insert_preferred_areas_for_device, [deviceId[0].id, areaCode], function (err, dbRes) {
                 if (err) {
                     Logger.error(err.stack);
                     return res.status(500).send(err.message);
                 } else {
-                    Logger.info('Successfully added preferred area: area_code: ' + area_code + ' for unique_id: ' + unique_id);
+                    Logger.info('Successfully added preferred area: area_code: ' + areaCode + ' for unique_id: ' + uniqueId);
                     return res.status(200).send(dbRes);
                 }
             });
@@ -394,28 +454,28 @@ router.post('/areas/preferred', function (req, res) {
 });
 
 router.get('/areas/preferred', function (req, res) {
-    var unique_id = req.query.unique_id ? req.query.unique_id : '';
+    var uniqueId = req.query.unique_id;
 
-    if (helper.isEmpty(unique_id)) {
+    if (helper.isEmpty(uniqueId)) {
         Logger.error('Could not get preferred areas for device. Error: unique_id is mandatory');
         return res.status(400).send('unique_id is mandatory');
     }
 
-    connection.query(queries.select_device, [unique_id], function (err, device_id) {
+    connection.query(queries.select_device, [uniqueId], function (err, deviceId) {
         if (err) {
             Logger.error(err.stack);
             return res.status(500).send(err.message);
-        } else if (helper.isEmpty(device_id) || helper.isEmpty(device_id[0].id)) {
-            var errMsg = 'Could not get preferred areas for device. Error: could not find device_id for unique_id: ' + unique_id;
+        } else if (helper.isEmpty(deviceId) || helper.isEmpty(deviceId[0].id)) {
+            var errMsg = 'Could not get preferred areas for device. Error: could not find device_id for unique_id: ' + uniqueId;
             Logger.error(errMsg);
             return res.status(404).send(errMsg);
         } else {
-            connection.query(queries.select_preferred_areas_for_device, [device_id[0].id], function (err, dbRes) {
+            connection.query(queries.select_preferred_areas_for_device, [deviceId[0].id], function (err, dbRes) {
                 if (err) {
                     Logger.error(err.stack);
                     return res.status(500).send(err.message);
                 } else {
-                    Logger.info('Successfully get preferred areas for unique_id: ' + unique_id);
+                    Logger.info('Successfully get preferred areas for unique_id: ' + uniqueId);
                     return res.status(200).send(dbRes);
                 }
             });
@@ -425,28 +485,28 @@ router.get('/areas/preferred', function (req, res) {
 
 
 router.delete('/areas/allPreferred', function (req, res) {
-    var unique_id = req.query.unique_id ? req.query.unique_id : '';
+    var uniqueId = req.query.unique_id;
 
-    if (helper.isEmpty(unique_id)) {
+    if (helper.isEmpty(uniqueId)) {
         Logger.error('Could not delete all preferred areas for device. Error: unique_id is mandatory');
         return res.status(400).send('unique_id is mandatory');
     }
 
-    connection.query(queries.select_device, [unique_id], function (err, device_id) {
+    connection.query(queries.select_device, [uniqueId], function (err, deviceId) {
         if (err) {
             Logger.error(err.stack);
             return res.status(500).send(err.message);
-        } else if (helper.isEmpty(device_id) || helper.isEmpty(device_id[0].id)) {
-            var errMsg = 'Could not delete all preferred areas for device. Error: could not find device_id for unique_id: ' + unique_id;
+        } else if (helper.isEmpty(deviceId) || helper.isEmpty(deviceId[0].id)) {
+            var errMsg = 'Could not delete all preferred areas for device. Error: could not find device_id for unique_id: ' + uniqueId;
             Logger.error(errMsg);
             return res.status(404).send(errMsg);
         } else {
-            connection.query(queries.delete_all_preferred_area_for_device, [device_id[0].id], function (err, dbRes) {
+            connection.query(queries.delete_all_preferred_area_for_device, [deviceId[0].id], function (err, dbRes) {
                 if (err) {
                     Logger.error(err.stack);
                     return res.status(500).send(err.message);
                 } else {
-                    Logger.info('Successfully deleted all preferred areas for unique_id: ' + unique_id);
+                    Logger.info('Successfully deleted all preferred areas for unique_id: ' + uniqueId);
                     return res.status(200).send(dbRes);
                 }
             });
@@ -455,34 +515,34 @@ router.delete('/areas/allPreferred', function (req, res) {
 });
 
 router.delete('/areas/OnePreferred', function (req, res) {
-    var unique_id = req.query.unique_id ? req.query.unique_id : '';
-    var area_code = req.query.area_code ? req.query.area_code : '';
+    var uniqueId = req.query.unique_id;
+    var areaCode = req.query.area_code;
 
-    if (helper.isEmpty(area_code)) {
+    if (helper.isEmpty(areaCode)) {
         Logger.error('Could not delete preferred area for device. Error: area_code is mandatory');
         return res.status(400).send('area_code is mandatory');
     }
 
-    if (helper.isEmpty(unique_id)) {
+    if (helper.isEmpty(uniqueId)) {
         Logger.error('Could not delete preferred area for device. Error: unique_id is mandatory');
         return res.status(400).send('unique_id is mandatory');
     }
 
-    connection.query(queries.select_device, [unique_id], function (err, device_id) {
+    connection.query(queries.select_device, [uniqueId], function (err, deviceId) {
         if (err) {
             Logger.error(err.stack);
             return res.status(500).send(err.message);
-        } else if (helper.isEmpty(device_id) || helper.isEmpty(device_id[0].id)) {
-            var errMsg = 'Could not delete preferred area for device. Error: could not find device_id for unique_id: ' + unique_id;
+        } else if (helper.isEmpty(deviceId) || helper.isEmpty(deviceId[0].id)) {
+            var errMsg = 'Could not delete preferred area for device. Error: could not find device_id for unique_id: ' + uniqueId;
             Logger.error(errMsg);
             return res.status(404).send(errMsg);
         } else {
-            connection.query(queries.delete_preferred_area_for_device, [device_id[0].id, area_code], function (err, dbRes) {
+            connection.query(queries.delete_preferred_area_for_device, [deviceId[0].id, areaCode], function (err, dbRes) {
                 if (err) {
                     Logger.error(err.stack);
                     return res.status(500).send(err.message);
                 } else {
-                    Logger.info('Successfully deleted preferred area: area_code: ' + area_code + ' for unique_id: ' + unique_id);
+                    Logger.info('Successfully deleted preferred area: area_code: ' + areaCode + ' for unique_id: ' + uniqueId);
                     return res.status(200).send(dbRes);
                 }
             });

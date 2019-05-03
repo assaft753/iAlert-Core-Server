@@ -1,5 +1,5 @@
 var express = require('express');
-var promise_db = require('../models/promise-db');
+var promiseDb = require('../models/promise-db');
 var queries = require('../queries/queries');
 var helper = require('../models/helper');
 var connection = require('../models/async-db');
@@ -11,9 +11,10 @@ Logger.level = 'debug';
 //------- Devices -------//
 
 router.post('/register', function (req, res) {
-  var uniqueId = req.body['unique_id'];
-  var isAndroid = req.body['is_android'];
-  var prevUniqueId = req.body['prev_id'];
+  var uniqueId = req.body.unique_id;
+  var isAndroid = req.body.is_android ? 1 : 0;
+  var prevUniqueId = req.body.prev_id;
+
   if (helper.isEmpty(uniqueId)) {
       Logger.error('Could not register device. Error: unique_id is mandatory');
       return res.status(400).send('unique_id is mandatory');
@@ -25,7 +26,6 @@ router.post('/register', function (req, res) {
           return res.status(400).send('is_android is mandatory');
       }
 
-      isAndroid = isAndroid ? 1: 0;
       connection.query(queries.register_device, [uniqueId, isAndroid], function (err, dbRes) {
          if (err) {
              Logger.error(err.stack);
@@ -52,29 +52,14 @@ router.post('/register', function (req, res) {
           }
       });
   }
-
-  // try {
-  //   var currentUniqueId = promise_db.query(queries.update_device_id, [uniqueId, prevUniqueId]);
-  //   if (currentUniqueId.affectedRows > 0) {
-  //       currentUniqueId = promise_db.query(queries.register_device, [uniqueId]);
-  //       if (currentUniqueId['affectedRows'] > 0) {
-  //         return res.status(200).send(currentUniqueId);
-  //       } else {
-  //           return res.sendStatus(500);
-  //       }
-  //   }
-  // }
-  // catch (err) {
-  //   return res.status(400).send(err);
-  // }
 });
 
 router.put('/update', function (req, res) {
-    var lat = req.body['lat'];
-    var lang = req.body['lang'];
-    var city = req.body['city'];
-    var uniqueId = req.body['unique_id'];
-    var language = req.body['language'];
+    var lat = req.body.lat;
+    var lang = req.body.lang;
+    var city = req.body.city;
+    var uniqueId = req.body.unique_id;
+    var language = req.body.language;
 
     if (helper.isEmpty(lat)){
         Logger.error('Could not update device. Error: lat is mandatory');
@@ -101,15 +86,21 @@ router.put('/update', function (req, res) {
         return res.status(400).send('language is mandatory');
     }
 
-    var lowerCaseCity = city.toLowerCase();
+    var cityName = helper.convertCityName(city);
+
+    if (helper.isEmpty(cityName)) {
+        Logger.error('Could not post shelter. Error: city must contains letters');
+        return res.status(400).send('city must contains letters');
+    }
+
     try {
-        var areaCodeList = promise_db.query(queries.select_area_code_by_city_name, [lowerCaseCity]);
+        var areaCodeList = promiseDb.query(queries.select_area_code_by_city_name, [cityName]);
         if (areaCodeList.length === 0) {
-            Logger.error('Could not update device. Error: Could not find area code for city: ' + city);
-            return res.status(404).send('Could not find area code for city: ' + city);
+            Logger.error('Could not update device. Error: Could not find area code for city: ' + cityName);
+            return res.status(404).send('Could not find area code for city: ' + cityName);
         }
         var areaCode = areaCodeList[0]['area_code'];
-        var updateResult = promise_db.query(queries.update_device, [lat, lang, areaCode, language, uniqueId]);
+        var updateResult = promiseDb.query(queries.update_device, [lat, lang, areaCode, language, uniqueId]);
         if (updateResult.affectedRows === 0) {
             Logger.error('Could not update device. Error: Failed to update device');
             return res.status(500).send('Failed to update device');
