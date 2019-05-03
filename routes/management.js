@@ -398,26 +398,15 @@ router.post('/areas', function (req, res) {
             // parse city to array
             var area = dbRes[0];
             var cities = area.city;
-            Logger.debug('type of cities = ' + typeof cities);
-            Logger.debug('cities = ' + cities);
             cities = cities.split(',');
-            Logger.debug('type of cities after split = ' + typeof cities);
-            Logger.debug('cities after parse = ' + cities);
             // check if city is already exists in the array
-            Logger.debug('cities.length = ' + cities.length);
-            Logger.debug('_.indexOf(cities, city) = ' + _.indexOf(cities, city) + ' for city = ' + city);
-            if (_.indexOf(cities, city) === -1) {
-                Logger.debug('IN if');
+            if (_.indexOf(cities, cityName) !== -1) {
                 // Send message: city exists
                 return res.status(409).send('city already exists');
             } else {
-                Logger.debug('IN else');
                 // update city array + convert to string and save it to DB
-                cities.push(city);
-                Logger.debug('type of cities = ' + typeof cities);
+                cities.push(cityName);
                 cities = cities.join(',');
-                Logger.debug('type of cities after join = ' + typeof cities);
-                Logger.debug('cities = ' + cities);
                 connection.query(queries.update_city, [cities, areaCode], function (err, dbRes) {
                     if (err) {
                         Logger.error(err.stack);
