@@ -7,6 +7,7 @@ var fbAdmin = require('../models/iAlert-firebase');
 var TOKEN = 'iAlert_Collection_Shelters_Token';
 var log4js = require('log4js');
 var Logger = log4js.getLogger('[Management]');
+var _ = require('underscore');
 Logger.level = 'debug';
 
 
@@ -400,28 +401,33 @@ router.post('/areas', function (req, res) {
             Logger.debug('type of cities = ' + typeof cities);
             Logger.debug('cities = ' + cities);
             cities = cities.split(',');
-            Logger.debug('type of cities after parse = ' + typeof cities);
+            Logger.debug('type of cities after split = ' + typeof cities);
             Logger.debug('cities after parse = ' + cities);
             // check if city is already exists in the array
-            cities.forEach(function (cityName) {
-                if (cityName === city) {
-                    // Send message: city exists
-                    return res.status(409).send('city already exists');
-                } else {
-                    // else update city array + convert to string and save it to DB
-                    cities.push(city);
-                    cities = cities.join(',');
-                    connection.query(queries.update_city, [cities, areaCode], function (err, dbRes) {
-                        if (err) {
-                            Logger.error(err.stack);
-                            return res.status(500).send(err.message);
-                        } else {
-                            Logger.info('Create area successfully');
-                            return res.status(200).send(dbRes);
-                        }
-                    });
-                }
-            });
+            Logger.debug('cities.length = ' + cities.length);
+            Logger.debug('_.indexOf(cities, city) = ' + _.indexOf(cities, city) + ' for city = ' + city);
+            if (_.indexOf(cities, city) === -1) {
+                Logger.debug('IN if');
+                // Send message: city exists
+                return res.status(409).send('city already exists');
+            } else {
+                Logger.debug('IN else');
+                // update city array + convert to string and save it to DB
+                cities.push(city);
+                Logger.debug('type of cities = ' + typeof cities);
+                cities = cities.join(',');
+                Logger.debug('type of cities after join = ' + typeof cities);
+                Logger.debug('cities = ' + cities);
+                connection.query(queries.update_city, [cities, areaCode], function (err, dbRes) {
+                    if (err) {
+                        Logger.error(err.stack);
+                        return res.status(500).send(err.message);
+                    } else {
+                        Logger.info('Create area successfully');
+                        return res.status(200).send(dbRes);
+                    }
+                });
+            }
         }
     });
 });
