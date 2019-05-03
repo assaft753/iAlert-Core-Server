@@ -399,16 +399,31 @@ router.post('/areas', function (req, res) {
             var cities = area.city;
             Logger.debug('type of cities = ' + typeof cities);
             Logger.debug('cities = ' + cities);
-            cities = JSON.parse(cities);
+            cities = cities.split(',');
             Logger.debug('type of cities after parse = ' + typeof cities);
             Logger.debug('cities after parse = ' + cities);
             // check if city is already exists in the array
-            // if exists -> send message exists
-            // else update city array + convert to string and save it to DB
+            cities.forEach(function (cityName) {
+                if (cityName === city) {
+                    // Send message: city exists
+                    return res.status(409).send('city already exists');
+                } else {
+                    // else update city array + convert to string and save it to DB
+                    cities.push(city);
+                    cities = cities.join(',');
+                    connection.query(queries.update_city, [cities, areaCode], function (err, dbRes) {
+                        if (err) {
+                            Logger.error(err.stack);
+                            return res.status(500).send(err.message);
+                        } else {
+                            Logger.info('Create area successfully');
+                            return res.status(200).send(dbRes);
+                        }
+                    });
+                }
+            });
         }
-    })
-
-
+    });
 });
 
 router.get('/areas/getAll', function (req, res) {
