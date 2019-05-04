@@ -32,7 +32,7 @@ router.get('/notify', function (req, res)  {
 
     }
     
-    function createNotficationForDevice (device, redAlertId, maxTime, isRealAlert, cityName) {
+    function createNotficationForDevice (device, redAlertId, maxTime, isRealAlert, citiesNames) {
         return new Promise (function (resolve) {
             var deviceId = device['unique_id'];
             var preferredLanguage = device.preferred_language.toLowerCase();
@@ -51,11 +51,17 @@ router.get('/notify', function (req, res)  {
                 };
             } else {
                 if (preferredLanguage !== 'english') {
-                    cityName = cityNamesByLanguage['' + cityName]['' + preferredLanguage];
+                    citiesNames = citiesNames.split(',');
+                    var citiesNamesByPreferredLanguage = [];
+                    citiesNames.forEach(function (name) {
+                        citiesNamesByPreferredLanguage.push(cityNamesByLanguage['' + name]['' + preferredLanguage])
+                    });
+
+                    citiesNamesByPreferredLanguage = citiesNamesByPreferredLanguage.join(',');
                 }
                 message = {
                     notification: {
-                        title: deviceLanguageNotification['preferredAlert']['' + preferredLanguage].title + cityName,
+                        title: deviceLanguageNotification['preferredAlert']['' + preferredLanguage].title + citiesNamesByPreferredLanguage,
                         body: deviceLanguageNotification['preferredAlert']['' + preferredLanguage].body
                     }
                 };
@@ -63,7 +69,7 @@ router.get('/notify', function (req, res)  {
 
             message.token = deviceId.toString();
 
-            if (isRealAlert && device.is_android) {
+            if (isRealAlert && device.is_android && device.is_war_mode) {
                 var body = {
                     unique_id: deviceId,
                     latitude: device.latitude,
@@ -96,13 +102,13 @@ router.get('/notify', function (req, res)  {
     }
 
     function sendNotificationToDevicesWhichContainAreaAsPreferred(areaCode, devicesInAlertArea) {
-        asyncDb.query(queries.select_city_by_area_code, [areaCode], function (err, cityName) {
+        asyncDb.query(queries.select_city_by_area_code, [areaCode], function (err, citiesNames) {
             if (!helper.isEmpty(err)) {
                 Logger.error(err.stack);
                 return res.status(500).send(err);
             }
 
-            if (helper.isEmpty(cityName)) {
+            if (helper.isEmpty(citiesNames)) {
                 Logger.error('Could not find city name for area code: ' + areaCode);
                 return res.status(404).send('Could not find city name for area code: ' + areaCode);
             }
@@ -132,7 +138,7 @@ router.get('/notify', function (req, res)  {
                                 var promises = [];
 
                                 devices.forEach(function (device) {
-                                    promises.push(createNotficationForDevice(device, null, null, false, cityName))
+                                    promises.push(createNotficationForDevice(device, null, null, false, citiesNames))
                                 });
 
                                 Promise.all(promises)
@@ -343,6 +349,7 @@ function selectClosestShelters(latitude, longitude, getAll, cb) {
             var smallestDistance;
             var closestCoord = {};
             var shelterId = -1;
+
             closestShelterArr.forEach(function (point) {
                 var tempDistance = getDistanceBetweenTwoPoints(latitude, longitude, point.latitude, point.longitude);
                 if (helper.isEmpty(smallestDistance)) {
@@ -424,27 +431,48 @@ router.post('/closestSheltersAfterNotification', function (req, res) {
             Logger.error('Could not get closest shelter (after notification). Error: ' + errorMessage);
             return res.status(errorCode).send(errorMessage);
         } else {
-            var result = {
-                result: closestCoord
-            };
-            res.status(200).send(result); // send shelter coordinates to device
-
-            // Insert information to devices_red_alert table
-            asyncDb.query(queries.select_id_by_unique_id, [uniqueId], function (err, id) {
+            asyncDb.query(queries.select_area_code_by_red_alert_id, [redAlertId], function (err, areaCode) {
                 if (err) {
-                    Logger.error('Error while getting device id from DB. Error: ' + err);
+                    Logger.error(err.stack);
+                    return res.status(500).send(err.message);
+                } else if (helper.isEmpty(areaCode)) {
+                    Logger.error('Could not get closest shelter (after notification). Error: Could not find the area_code for red_alert_id: ' + redAlertId);
+                    return res.status(404).send('Could not find the area_code for red_alert_id: ' + redAlertId);
                 } else {
-                    id = id[0].id;
-                    asyncDb.query(queries.insert_red_alert_for_user, [redAlertId, shelterId, 0, id, shelterId, 0], function (err) {
-                        if (err) {
-                            Logger.error('Error while inserting to devices_red_alert. Error: ' + err.message);
-                        } else {
-                            Logger.info('Successfully insert to devices_red_alert.');
-                        }
+                    asyncDb.query(queries.select_max_time_by_area_code, [areaCode], function (err, maxTime) {
+                       if (err) {
+                           Logger.error(err.stack);
+                           return res.status(500).send(err.message);
+                       } else if (helper.isEmpty(maxTime)) {
+                           Logger.error('Could not get closest shelter (after notification). Error: Could not find max_time_to_arrive_to_shelter for area_code: ' + areaCode);
+                           return res.status(404).send('Could not find max_time_to_arrive_to_shelter for area_code: ' + areaCode);
+                       } else {
+                           closestCoord.max_time_to_arrive_to_shelter = maxTime;
+                           var result = {
+                               result: closestCoord
+                           };
+                           res.status(200).send(result); // send shelter coordinates to device
+
+                           // Insert information to devices_red_alert table
+                           asyncDb.query(queries.select_id_by_unique_id, [uniqueId], function (err, id) {
+                               if (err) {
+                                   Logger.error('Error while getting device id from DB. Error: ' + err);
+                               } else {
+                                   id = id[0].id;
+                                   asyncDb.query(queries.insert_red_alert_for_user, [redAlertId, shelterId, 0, id, shelterId, 0], function (err) {
+                                       if (err) {
+                                           Logger.error('Error while inserting to devices_red_alert. Error: ' + err.message);
+                                       } else {
+                                           Logger.info('Successfully insert to devices_red_alert.');
+                                       }
+                                   });
+                               }
+                           });
+                       }
                     });
                 }
-            });
 
+            });
         }
     });
 });

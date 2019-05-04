@@ -1,5 +1,4 @@
 var express = require('express');
-var promiseDb = require('../models/promise-db');
 var queries = require('../queries/queries');
 var helper = require('../models/helper');
 var connection = require('../models/async-db');
@@ -92,29 +91,30 @@ router.put('/update', function (req, res) {
         Logger.error('Could not post shelter. Error: city must contains letters');
         return res.status(400).send('city must contains letters');
     }
-
-    try {
-        var areaCodeList = promiseDb.query(queries.select_area_code_by_city_name, [cityName]);
-        if (areaCodeList.length === 0) {
+    helper.findAreaByCityName(cityName, function (errCode, errMessage, foundArea) {
+        if (errCode && errMessage) {
+            Logger.error(errMessage);
+            return res.status(errCode).send(errMessage);
+        } else if (helper.isEmpty(foundArea)) {
             Logger.error('Could not update device. Error: Could not find area code for city: ' + cityName);
             return res.status(404).send('Could not find area code for city: ' + cityName);
+        } else {
+            var areaCode = foundArea.area_code;
+            connection.query(queries.update_device, [lat, lang, areaCode, language, uniqueId], function (err, updateResult) {
+                if (err){
+                    Logger.error('Could not update device. Error: Failed to update device');
+                    return res.status(500).send('Failed to update device');
+                } else {
+                    Logger.info('Update device for unique id: ' + uniqueId + ' with values: ' +
+                        'lat: ' + lat + ' ' +
+                        'lang: ' + lang + ' ' +
+                        'areaCode: ' + areaCode + ' ' +
+                        'language: ' + language + ' successfully');
+                    return res.status(200).send(updateResult);
+                }
+            });
         }
-        var areaCode = areaCodeList[0]['area_code'];
-        var updateResult = promiseDb.query(queries.update_device, [lat, lang, areaCode, language, uniqueId]);
-        if (updateResult.affectedRows === 0) {
-            Logger.error('Could not update device. Error: Failed to update device');
-            return res.status(500).send('Failed to update device');
-        }
-        Logger.info('Update device for unique id: ' + uniqueId + ' with values: ' +
-            'lat: ' + lat + ' ' +
-            'lang: ' + lang + ' ' +
-            'areaCode: ' + areaCode + ' ' +
-            'language: ' + language + ' successfully');
-        return res.status(200).send(updateResult);
-    } catch (err) {
-        Logger.error(err.stack);
-        return res.status(500).send(err);
-    }
+    });
 });
 
 router.put('/preferred_language', function (req, res) {

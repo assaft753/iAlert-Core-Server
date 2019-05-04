@@ -42,7 +42,7 @@ exports.select_user_by_email = "SELECT * FROM users WHERE email = ?;";
 
 //------- Devices -------//
 
-exports.register_device = "INSERT INTO devices (unique_id, is_android) VALUES (?,?);";
+exports.register_device = "INSERT INTO devices (unique_id, is_android) VALUES (?, ?);";
 
 exports.update_device_id = "UPDATE devices SET unique_id = ? WHERE unique_id = ?;";
 
@@ -60,18 +60,27 @@ exports.select_id_by_unique_id = "SELECT id FROM devices WHERE unique_id=?;";
 
 exports.select_all_devices_with_ids_in_array = "SELECT * FROM devices WHERE id IN (?);";
 
+exports.update_is_war_mode_by_unique_id = "UPDATE devices SET is_war_mode=? WHERE unique_id=?;";
+
 
 //------- Areas -------//
 
 exports.insert_areas = "INSERT INTO areas (area_code, city, max_time_to_arrive_to_shelter) VALUES (?, ?, ?);";
 
-exports.select_area_code_by_city_name = "SELECT area_code FROM areas WHERE city = ?;";
-
-exports.select_area_id_by_city_name = "SELECT id FROM areas WHERE city = ?;";
-
 exports.select_area_id_by_area_code = "SELECT id FROM areas WHERE area_code = ?;";
 
 exports.select_max_time_by_area_code = "SELECT max_time_to_arrive_to_shelter FROM areas WHERE area_code=?;";
+
+exports.select_city_by_area_code = "SELECT city FROM areas WHERE area_code=?;";
+
+exports.select_all_areas = "SELECT * FROM areas;";
+
+exports.select_area_by_area_code = 'SELECT * FROM areas WHERE area_code=?;';
+
+exports.update_city = "UPDATE areas SET city = ? WHERE area_code = ?;";
+
+
+//------- Preferred Area Code For Device Id -------//
 
 exports.insert_preferred_areas_for_device = "INSERT INTO preferred_area_code_for_device_id (device_id, area_code) VALUES (?, ?);";
 
@@ -83,14 +92,9 @@ exports.delete_all_preferred_area_for_device = "DELETE FROM preferred_area_code_
 
 exports.select_all_device_ids_by_area_code = "SELECT device_id FROM preferred_area_code_for_device_id WHERE area_code=?;";
 
-exports.select_city_by_area_code = "SELECT city FROM areas WHERE area_code=?;";
-
-exports.select_all_areas = "SELECT * FROM areas;";
-
-exports.select_area_by_area_code = 'SELECT * FROM areas WHERE area_code=?;';
-
-exports.update_city = "UPDATE areas SET city = ? WHERE area_code = ?;";
 
 //------- Red alert -------//
 
 exports.insert_red_alert_notification = "INSERT INTO red_alert (area_code) VALUES (?);";
+
+exports.select_area_code_by_red_alert_id = "SELECT area_code FROM red_alert WHERE id=?;";

@@ -56,30 +56,6 @@ router.get('/shelters/safeZones', function (req, res) {
     });
 });
 
-function findAreaByCityName (cityName, cb) {
-    connection.query(queries.select_all_areas, [], function (err, dbRes) {
-        if (err) {
-            Logger.error(err.stack);
-            return cb(500, err.message);
-        } else if (helper.isEmpty(dbRes)) {
-            Logger.error('Could not create shelters. Error: Could not find any areas');
-            return cb(404, 'Could not find any areas');
-        } else {
-            var cities = [];
-            var foundArea = null;
-
-            for (var i = 0; i < dbRes.length && helper.isEmpty(foundArea); i++) {
-                cities = dbRes[i].city.split(',');
-                if (_.indexOf(cities, cityName) !== -1) {
-                    foundArea = dbRes[i];
-                }
-            }
-
-            return cb(null, null, foundArea);
-        }
-    });
-}
-
 router.post('/shelters', function (req, res) {
     var city = req.body.city;
     var userEmail = req.body.user_email;
@@ -104,10 +80,11 @@ router.post('/shelters', function (req, res) {
         return res.status(400).send('city must contains letters');
     }
 
-    findAreaByCityName(cityName, function (errCode, errMessage, foundArea) {
+    helper.findAreaByCityName(cityName, function (errCode, errMessage, foundArea) {
        if (errCode && errMessage) {
+           Logger.error(errMessage);
            return res.status(errCode).send(errMessage);
-       } else if (foundArea) {
+       } else if (!helper.isEmpty(foundArea)) {
            var areaCode = foundArea.area_code;
            connection.query(queries.select_all_by_lat_lon, [latitude, longitude], function (err, dbRes) {
                if (err) {
@@ -201,6 +178,31 @@ router.get('/devices', function (req, res) {
 
             Logger.info('Get devices in area code: ' + areaCode + ' successfully');
             return res.status(200).send(result);
+        }
+    });
+});
+
+router.put('/devices/update_war_mode', function (req, res) {
+   var isWarMode = req.body.is_war_mode;
+   var uniqueId = req.body.unique_id;
+
+    if (helper.isEmpty(isWarMode)) {
+        Logger.error('Could not update device war mode. Error: is_war_mode is mandatory');
+        return res.status(400).send('is_war_mode is mandatory');
+    }
+
+    if (helper.isEmpty(uniqueId)) {
+        Logger.error('Could not update device war mode. Error: unique_id is mandatory');
+        return res.status(400).send('unique_id is mandatory');
+    }
+
+    connection.query(queries.update_is_war_mode_by_unique_id, [isWarMode, uniqueId], function (err, dbRes) {
+        if (err) {
+            Logger.error(err.stack);
+            return res.status(500).send(err.message);
+        } else {
+            Logger.info('Update war mode for device successfully');
+            return res.status(200).send(dbRes);
         }
     });
 });
@@ -473,10 +475,11 @@ router.get('/areas', function (req, res) {
         return res.status(400).send('city must contains letters');
     }
 
-    findAreaByCityName(cityName, function (errCode, errMessage, foundArea) {
+    helper.findAreaByCityName(cityName, function (errCode, errMessage, foundArea) {
         if (errCode && errMessage) {
+            Logger.error(errMessage);
             return res.status(errCode).send(errMessage);
-        } else if (foundArea) {
+        } else if (!helper.isEmpty(foundArea)) {
             return res.status(200).send(foundArea.area_code);
         } else {
             Logger.error('Could not get area. Error: Could not find any area for city name: ' + cityName);
@@ -508,13 +511,23 @@ router.post('/areas/preferred', function (req, res) {
             Logger.error(errMsg);
             return res.status(404).send(errMsg);
         } else {
-            connection.query(queries.insert_preferred_areas_for_device, [deviceId[0].id, areaCode], function (err, dbRes) {
+            connection.query(queries.select_preferred_areas_for_device, [deviceId[0].id], function (err, dbRes) {
                 if (err) {
                     Logger.error(err.stack);
                     return res.status(500).send(err.message);
+                } else if (!helper.isEmpty(dbRes) && dbRes.length === 10) {
+                    Logger.error('Could not add preferred area for device. Error: Device can assign to get notification for maximum 10 areas');
+                    return res.status(400).send('Device can assign to get notification for maximum 10 areas');
                 } else {
-                    Logger.info('Successfully added preferred area: area_code: ' + areaCode + ' for unique_id: ' + uniqueId);
-                    return res.status(200).send(dbRes);
+                    connection.query(queries.insert_preferred_areas_for_device, [deviceId[0].id, areaCode], function (err, dbRes) {
+                        if (err) {
+                            Logger.error(err.stack);
+                            return res.status(500).send(err.message);
+                        } else {
+                            Logger.info('Successfully added preferred area: area_code: ' + areaCode + ' for unique_id: ' + uniqueId);
+                            return res.status(200).send(dbRes);
+                        }
+                    });
                 }
             });
         }
