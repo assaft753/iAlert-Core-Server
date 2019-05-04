@@ -56,6 +56,30 @@ router.get('/shelters/safeZones', function (req, res) {
     });
 });
 
+function findAreaByCityName (cityName, cb) {
+    connection.query(queries.select_all_areas, [], function (err, dbRes) {
+        if (err) {
+            Logger.error(err.stack);
+            return cb(500, err.message);
+        } else if (helper.isEmpty(dbRes)) {
+            Logger.error('Could not create shelters. Error: Could not find any areas');
+            return cb(404, 'Could not find any areas');
+        } else {
+            var cities = [];
+            var foundArea = null;
+
+            for (var i = 0; i < dbRes.length && helper.isEmpty(foundArea); i++) {
+                cities = dbRes[i].city.split(',');
+                if (_.indexOf(cities, cityName) !== -1) {
+                    foundArea = dbRes[i];
+                }
+            }
+
+            return cb(null, null, foundArea);
+        }
+    });
+}
+
 router.post('/shelters', function (req, res) {
     var city = req.body.city;
     var userEmail = req.body.user_email;
@@ -80,37 +104,35 @@ router.post('/shelters', function (req, res) {
         return res.status(400).send('city must contains letters');
     }
 
-    connection.query(queries.select_area_code_by_city_name, [cityName], function (err, areaCode) {
-        if (err) {
-            Logger.error(err.stack);
-            return res.status(500).send(err.message);
-        } else if (helper.isEmpty(areaCode)){
-            Logger.error('Could not create shelters. Error: Could not find any area for city: ' + cityName);
-            return res.status(404).send('Could not find any area for city: ' + cityName);
-        } else {
-            areaCode = areaCode[0].area_code;
-            connection.query(queries.select_all_by_lat_lon, [latitude, longitude], function (err, dbRes) {
-                if (err) {
-                    Logger.error(err.stack);
-                    return res.status(500).send(err.message);
-                } else if (!helper.isEmpty(dbRes)) {
-                    Logger.info('This shelter in latitude = ' + latitude + ' and longitude = ' + longitude + ' already exists in DB');
-                    return res.status(200).send('This shelter in latitude = ' + latitude + ' and longitude = ' + longitude + ' already exists in DB');
-                } else {
-                    connection.query(queries.insert_shelter, [areaCode, userEmail, latitude, longitude, address], function (err, dbRes) {
-                        if (err) {
-                            Logger.error(err.stack);
-                            return res.status(500).send(err.message);
-                        } else {
-                            Logger.info('Create shelters successfully');
-                            return res.status(200).send(dbRes);
-                        }
-                    });
-                }
-            });
-        }
+    findAreaByCityName(cityName, function (errCode, errMessage, foundArea) {
+       if (errCode && errMessage) {
+           return res.status(errCode).send(errMessage);
+       } else if (foundArea) {
+           var areaCode = foundArea.area_code;
+           connection.query(queries.select_all_by_lat_lon, [latitude, longitude], function (err, dbRes) {
+               if (err) {
+                   Logger.error(err.stack);
+                   return res.status(500).send(err.message);
+               } else if (!helper.isEmpty(dbRes)) {
+                   Logger.info('This shelter in latitude = ' + latitude + ' and longitude = ' + longitude + ' already exists in DB');
+                   return res.status(409).send('This shelter in latitude = ' + latitude + ' and longitude = ' + longitude + ' already exists in DB');
+               } else {
+                   connection.query(queries.insert_shelter, [areaCode, userEmail, latitude, longitude, address], function (err, dbRes) {
+                       if (err) {
+                           Logger.error(err.stack);
+                           return res.status(500).send(err.message);
+                       } else {
+                           Logger.info('Create shelters successfully');
+                           return res.status(200).send(dbRes);
+                       }
+                   });
+               }
+           });
+       } else {
+           Logger.error('Could not create shelters. Error: Could not find any area for city: ' + cityName);
+           return res.status(404).send('Could not find any area for city: ' + cityName);
+       }
     });
-
 });
 
 
@@ -451,16 +473,14 @@ router.get('/areas', function (req, res) {
         return res.status(400).send('city must contains letters');
     }
 
-    connection.query(queries.select_area_code_by_city_name, [cityName], function ( err, dbRes ) {
-        if (err) {
-            Logger.error(err.stack);
-            return res.status(500).send(err.message);
-        } else if (helper.isEmpty(dbRes)) {
+    findAreaByCityName(cityName, function (errCode, errMessage, foundArea) {
+        if (errCode && errMessage) {
+            return res.status(errCode).send(errMessage);
+        } else if (foundArea) {
+            return res.status(200).send(foundArea.area_code);
+        } else {
             Logger.error('Could not get area. Error: Could not find any area for city name: ' + cityName);
             return res.status(404).send('Could not find any area for city name: ' + cityName);
-        } else {
-            Logger.info('Get area for city: ' + cityName + ' successfully');
-            return res.status(200).send(dbRes[0]);
         }
     });
 });
