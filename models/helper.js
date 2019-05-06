@@ -1,5 +1,6 @@
 var queries = require('../queries/queries');
 var connection = require('../models/async-db');
+var _ = require('underscore');
 
 function isEmpty (value) {
     return (
