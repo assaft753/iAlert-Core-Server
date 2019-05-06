@@ -1,7 +1,7 @@
 var queries = require('../queries/queries');
 var connection = require('../models/async-db');
 
-exports.isEmpty = function (value) {
+function isEmpty (value) {
     return (
         value === '' ||
         value === null ||
@@ -10,7 +10,9 @@ exports.isEmpty = function (value) {
         (typeof value === 'object' && !(value instanceof Map) && Object.keys(value).length === 0) ||
         (value instanceof Map && value.size === 0)
     );
-};
+}
+
+exports.isEmpty = isEmpty;
 
 exports.degreeToXY = function (lat, lon) {
     var rMajor = 6378137; //Equatorial Radius, WGS84
