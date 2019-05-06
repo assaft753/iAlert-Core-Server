@@ -439,6 +439,7 @@ router.post('/closestSheltersAfterNotification', function (req, res) {
                     Logger.error('Could not get closest shelter (after notification). Error: Could not find the area_code for red_alert_id: ' + redAlertId);
                     return res.status(404).send('Could not find the area_code for red_alert_id: ' + redAlertId);
                 } else {
+                    areaCode = areaCode[0].area_code;
                     asyncDb.query(queries.select_max_time_by_area_code, [areaCode], function (err, maxTime) {
                        if (err) {
                            Logger.error(err.stack);
@@ -447,6 +448,7 @@ router.post('/closestSheltersAfterNotification', function (req, res) {
                            Logger.error('Could not get closest shelter (after notification). Error: Could not find max_time_to_arrive_to_shelter for area_code: ' + areaCode);
                            return res.status(404).send('Could not find max_time_to_arrive_to_shelter for area_code: ' + areaCode);
                        } else {
+                           maxTime = maxTime[0].max_time_to_arrive_to_shelter;
                            closestCoord.max_time_to_arrive_to_shelter = maxTime;
                            var result = {
                                result: closestCoord
