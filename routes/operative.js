@@ -199,10 +199,13 @@ router.get('/notify', function (req, res)  {
                     promises.push(createNotficationForDevice(device, redAlertId, maxTime, true, null));
                 });
 
+                Logger.debug('Going to notify all signed devices for area code: ' + areaCode);
                 Promise.all(promises)
                     .then(function () {
                       sendNotificationToDevicesWhichContainAreaAsPreferred(areaCode);
-                    });
+                    }).catch(function (error) {
+                        Logger.debug('Failed to notify signed devices with Error: ' + error);
+                });
             });
         });
     });
