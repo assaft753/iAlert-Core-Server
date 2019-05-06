@@ -15,16 +15,13 @@
   },
   "preferredAlert": {
     "english": {
-      "title": "Red Alert in area ",
-      "body": "Press here to navigate to a safe zone"
+      "title": "Red Alert in area "
     },
     "hebrew": {
-      "title": "צבע אדום באזור ",
-      "body": "נשמעה אזעקת צבע אדום באזור עיר מועדפת שהינך רשום לקבלת התראות עבורה"
+      "title": "צבע אדום באזור "
     },
     "russian": {
-      "title": "",
-      "body": ""
+      "title": ""
     }
   }
 }

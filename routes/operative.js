@@ -57,11 +57,11 @@ router.get('/notify', function (req, res)  {
                         citiesNamesByPreferredLanguage.push(cityNamesByLanguage['' + name]['' + preferredLanguage])
                     });
 
-                    citiesNamesByPreferredLanguage = citiesNamesByPreferredLanguage.join(',');
+                    citiesNames = citiesNamesByPreferredLanguage.join(',');
                 }
                 message = {
                     notification: {
-                        title: deviceLanguageNotification['preferredAlert']['' + preferredLanguage].title + citiesNamesByPreferredLanguage,
+                        title: deviceLanguageNotification['preferredAlert']['' + preferredLanguage].title + citiesNames,
                         body: deviceLanguageNotification['preferredAlert']['' + preferredLanguage].body
                     }
                 };
@@ -113,6 +113,7 @@ router.get('/notify', function (req, res)  {
                 return res.status(404).send('Could not find city name for area code: ' + areaCode);
             }
 
+            citiesNames = citiesNames[0].city;
             asyncDb.query(queries.select_all_device_ids_by_area_code, [areaCode], function (err, deviceIds) {
                 if (!helper.isEmpty(err)) {
                     Logger.error(err.stack);
@@ -120,9 +121,8 @@ router.get('/notify', function (req, res)  {
                 }
 
                 if (!helper.isEmpty(deviceIds)) {
-                    Logger.debug('****** Got device_ids = ' + JSON.stringify(deviceIds, null, 4));
-                    Logger.debug('***** device_ids = ' + deviceIds);
-                    asyncDb.query(queries.select_all_devices_with_ids_in_array, [deviceIds], function (devices) {
+                    deviceIds = _.pluck(deviceIds, 'device_id');
+                    asyncDb.query(queries.select_all_devices_with_ids_in_array, [deviceIds], function (err, devices) {
                         if (!helper.isEmpty(err)) {
                             Logger.error(err.stack);
                             return res.status(500).send(err);
