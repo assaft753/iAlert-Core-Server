@@ -1,42 +1,94 @@
 {
   "afula": {
     "hebrew": "עפולה",
-    "russian": ""
+    "russian": "Афула"
   },
   "ahi'ezer": {
     "hebrew": "אחיעזר",
-    "russian": ""
+    "russian": "Achiezer"
   },
   "ashdod": {
     "hebrew": "אשדוד",
-    "russian": ""
+    "russian": "Ашдоде"
   },
   "hadera": {
     "hebrew": "חדרה",
-    "russian": ""
+    "russian": "Хадера"
   },
   "haifa": {
     "hebrew": "חיפה",
-    "russian": ""
+    "russian": "Хайфа"
   },
   "modiin": {
     "hebrew": "מודיעין",
-    "russian": ""
+    "russian": "Модиин"
   },
   "netanya": {
     "hebrew": "נתניה",
-    "russian": ""
+    "russian": "Нетания"
   },
-  "ra'anana": {
+  "raanana": {
     "hebrew": "רעננה",
-    "russian": ""
+    "russian": "Раанана"
   },
   "rehovot": {
     "hebrew": "רחובות",
-    "russian": ""
+    "russian": "Реховот"
   },
   "telavivyafo": {
-    "hebrew": "תל-אביב",
-    "russian": ""
+    "hebrew": "תל-אביב יפו",
+    "russian": "Тель-Авив Яффо"
+  },
+  "metula": {
+    "hebrew": "מטולה",
+    "russian": "Metula"
+  },
+  "kiryatshmona": {
+    "hebrew": "קריית שמונה",
+    "russian": "Кирьят Шмона"
+  },
+  "zefat": {
+    "hebrew": "צפת",
+    "russian": "Цфат"
+  },
+  "tiberias": {
+    "hebrew": "טבריה",
+    "russian": "Тверия"
+  },
+  "ramatgan": {
+    "hebrew": "רמת גן",
+    "russian": "Рамат-Ган"
+  },
+  "holon": {
+    "hebrew": "חולון",
+    "russian": "Холон"
+  },
+  "petahtikva": {
+    "hebrew": "פתח-תקווה",
+    "russian": "Петах Тиква"
+  },
+  "roshhaayin": {
+    "hebrew": "ראש העין",
+    "russian": "Рош ха-Аин"
+  },
+  "ahiezer": {
+    "hebrew": "אחיעזר",
+    "russian": "Achiezer"
+  },
+  "jerusalem": {
+    "hebrew": "ירושלים",
+    "russian": "Иерусалим"
+  },
+  "ashkelon": {
+    "hebrew": "אשקלון",
+    "russian": "Ашкелон"
+  },
+  "beersheva": {
+    "hebrew": "באר-שבע",
+    "russian": "Беэр Шева"
+  },
+  "eilat": {
+    "hebrew": "אילת",
+    "russian": "Эйлат"
   }
 }

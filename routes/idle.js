@@ -100,10 +100,6 @@ router.put('/update', function (req, res) {
         } else {
             var areaCode = foundArea.area_code;
             language = validateLanguage(language);
-            if (language !== 'hebrew' && language !== 'english' && language !== 'russian') {
-                Logger.debug('Server support only languages: hebrew, english and russian, update device language with default language: english');
-                language = 'english';
-            }
             connection.query(queries.update_device, [lat, lang, areaCode, language, uniqueId], function (err, updateResult) {
                 if (err){
                     Logger.error('Could not update device. Error: Failed to update device');
