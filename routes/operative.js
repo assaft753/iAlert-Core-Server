@@ -12,10 +12,18 @@ var log4js = require('log4js');
 var Logger = log4js.getLogger('[Operative]');
 Logger.level = 'debug';
 
+/** EndPoint to send red alert notification for each device in area_code.
+    And also send notification to registered devices for getting notification for specific area
+ */
 router.get('/notify', function (req, res)  {
 
     //------- Private function -------//
 
+    /**
+     * Send the notification to device by using Firebase messaging system
+     * @param message
+     * @param deviceId
+     */
     function sendNotification(message, deviceId) {
         try {
         fbAdmin.messaging()
@@ -31,7 +39,16 @@ router.get('/notify', function (req, res)  {
         }
 
     }
-    
+
+    /**
+     * Generate notification message object
+     * @param device
+     * @param redAlertId
+     * @param maxTime
+     * @param isRealAlert
+     * @param citiesNames
+     * @return {Promise}
+     */
     function createNotficationForDevice (device, redAlertId, maxTime, isRealAlert, citiesNames) {
         return new Promise (function (resolve) {
             var deviceId = device['unique_id'];
@@ -101,6 +118,12 @@ router.get('/notify', function (req, res)  {
         });
     }
 
+    /**
+     * Find all devices which register to get notification about red alert in specific area.
+     * Generate and send notification for found devices
+     * @param areaCode
+     * @param devicesInAlertArea
+     */
     function sendNotificationToDevicesWhichContainAreaAsPreferred(areaCode, devicesInAlertArea) {
         asyncDb.query(queries.select_city_by_area_code, [areaCode], function (err, citiesNames) {
             if (!helper.isEmpty(err)) {
@@ -133,7 +156,6 @@ router.get('/notify', function (req, res)  {
                             devices = _.difference(devices, devicesInAlertArea);
 
                             if (!helper.isEmpty(devices)) {
-                                Logger.debug('****** Going to send notification for ' + devices.length + ' devices');
 
                                 var promises = [];
 
@@ -211,6 +233,7 @@ router.get('/notify', function (req, res)  {
     });
 });
 
+/** EndPoint to notify the server that a device arrived to safe zone */
 router.post('/arrive', function (req, res) {
     var redAlertId = req.body.red_alert_id;
     var uniqueId = req.body.unique_id;
@@ -235,12 +258,21 @@ router.post('/arrive', function (req, res) {
     });
 });
 
-// Converts from degrees to radians.
+/**
+ * Helper function to convert degrees to radians
+ * @param degrees
+ * @return {number}
+ */
 Math.toRadians = function(degrees) {
     return degrees * Math.PI / 180;
 };
 
 // Converts from radians to degrees.
+/**
+ * Helper function to convert radians to degrees
+ * @param radians
+ * @return {number}
+ */
 Math.toDegrees = function(radians) {
     return radians * 180 / Math.PI;
 };
@@ -292,6 +324,14 @@ function calculateDerivedPosition(latitude, longitude, range, bearing) {
     }
 }
 
+/**
+ * Function to calculate the distance between device coordination and shelter coordination
+ * @param deviceLat
+ * @param deviceLon
+ * @param shelterLat
+ * @param shelterLon
+ * @return {number}
+ */
 function getDistanceBetweenTwoPoints(deviceLat, deviceLon, shelterLat, shelterLon) {
     var R = 6371000; // m
     var dLat = Math.toRadians(shelterLat - deviceLat);
@@ -306,6 +346,15 @@ function getDistanceBetweenTwoPoints(deviceLat, deviceLon, shelterLat, shelterLo
     return R * c;
 }
 
+/**
+ * Function to get closest shelters
+ * @param latitude
+ * @param longitude
+ * @param redAlertId
+ * @param uniqueId
+ * @param getAll
+ * @param cb
+ */
 function getClosestShelters(latitude, longitude, redAlertId, uniqueId, getAll, cb) {
     if (helper.isEmpty(latitude) && helper.isEmpty(longitude)) {
         // select lat lon by unique id from users
@@ -325,6 +374,13 @@ function getClosestShelters(latitude, longitude, redAlertId, uniqueId, getAll, c
     }
 }
 
+/**
+ * Function to find closest shelters
+ * @param latitude
+ * @param longitude
+ * @param getAll
+ * @param cb
+ */
 function selectClosestShelters(latitude, longitude, getAll, cb) {
     var MAXIMUM_DISTANCE = 400;
 
@@ -374,7 +430,9 @@ function selectClosestShelters(latitude, longitude, getAll, cb) {
     });
 }
 
-
+/**
+ * EndPoint to get an array of closest shelters without getting a notification before
+ */
 router.post('/closestShelters', function (req, res) {
     var uniqueId = req.body.unique_id;
     var latitude = req.body.latitude;
@@ -406,6 +464,9 @@ router.post('/closestShelters', function (req, res) {
     });
 });
 
+/**
+ * EndPoint to get closest shelter after getting notification to device about red alert
+ */
 router.post('/closestSheltersAfterNotification', function (req, res) {
     var uniqueId = req.body.unique_id;
     var latitude = req.body.latitude;

@@ -2,6 +2,11 @@ var queries = require('../queries/queries');
 var connection = require('../models/async-db');
 var _ = require('underscore');
 
+/**
+ * Helper function to check if param value is empty
+ * @param value
+ * @return {boolean}
+ */
 function isEmpty (value) {
     return (
         value === '' ||
@@ -15,6 +20,12 @@ function isEmpty (value) {
 
 exports.isEmpty = isEmpty;
 
+/**
+ * Helper function to convert degrees (lat, lon) to point (x,y)
+ * @param lat
+ * @param lon
+ * @return {{x: number, y: number}}
+ */
 exports.degreeToXY = function (lat, lon) {
     var rMajor = 6378137; //Equatorial Radius, WGS84
     var shift = Math.PI * rMajor;
@@ -25,6 +36,11 @@ exports.degreeToXY = function (lat, lon) {
     return { 'x': x, 'y': y };
 };
 
+/**
+ * Helper function to convert city name (by regex)
+ * @param city
+ * @return {string}
+ */
 exports.convertCityName = function (city) {
     var regex = new RegExp('[^a-zA-Z]', 'g');
     city = city.replace(regex, '');
@@ -32,7 +48,11 @@ exports.convertCityName = function (city) {
     return city;
 };
 
-
+/**
+ * Helper function to find area by city name
+ * @param cityName
+ * @param cb
+ */
 exports.findAreaByCityName = function (cityName, cb) {
     connection.query(queries.select_all_areas, [], function (err, dbRes) {
         if (err) {

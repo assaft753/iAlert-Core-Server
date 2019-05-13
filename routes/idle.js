@@ -9,9 +9,10 @@ Logger.level = 'debug';
 
 //------- Devices -------//
 
+/** EndPoint to register new device or replace unique Id with a new one */
 router.post('/register', function (req, res) {
   var uniqueId = req.body.unique_id;
-  var isAndroid = req.body.is_android ? 1 : 0;
+  var isAndroid = req.body.is_android ? req.body.is_android : 0;
   var prevUniqueId = req.body.prev_id;
 
   if (helper.isEmpty(uniqueId)) {
@@ -20,11 +21,6 @@ router.post('/register', function (req, res) {
   }
 
   if (helper.isEmpty(prevUniqueId)) {
-      if (helper.isEmpty(isAndroid)) {
-          Logger.error('Could not register device. Error: is_android is mandatory');
-          return res.status(400).send('is_android is mandatory');
-      }
-
       connection.query(queries.register_device, [uniqueId, isAndroid], function (err, dbRes) {
          if (err) {
              Logger.error(err.stack);
@@ -53,6 +49,9 @@ router.post('/register', function (req, res) {
   }
 });
 
+/** EndPoint to update device location for continues updates.
+ *  Must register the phone before send location.
+ */
 router.put('/update', function (req, res) {
     var lat = req.body.lat;
     var lang = req.body.lang;
@@ -100,6 +99,11 @@ router.put('/update', function (req, res) {
             return res.status(404).send('Could not find area code for city: ' + cityName);
         } else {
             var areaCode = foundArea.area_code;
+            language = validateLanguage(language);
+            if (language !== 'hebrew' && language !== 'english' && language !== 'russian') {
+                Logger.debug('Server support only languages: hebrew, english and russian, update device language with default language: english');
+                language = 'english';
+            }
             connection.query(queries.update_device, [lat, lang, areaCode, language, uniqueId], function (err, updateResult) {
                 if (err){
                     Logger.error('Could not update device. Error: Failed to update device');
@@ -117,6 +121,22 @@ router.put('/update', function (req, res) {
     });
 });
 
+/**
+ * Helper function to validate that the langage is one of the system support languages
+ * If language is not supported, 'english' will return by default
+ * @param language
+ * @return {string}
+ */
+function validateLanguage (language) {
+    language = language.toLowerCase();
+    if (language !== 'hebrew' && language !== 'english' && language !== 'russian') {
+        Logger.debug('Server support only languages: hebrew, english and russian, update device language with default language: english');
+        language = 'english';
+    }
+    return language;
+}
+
+/** EndPoint to update the device’s preferred language which will be used for notifications */
 router.put('/preferred_language', function (req, res) {
     var uniqueId = req.body.unique_id;
     var language = req.body.language;
@@ -131,7 +151,8 @@ router.put('/preferred_language', function (req, res) {
         return res.status(400).send('language is mandatory');
     }
 
-    connection.query(queries.update_preferred_language_by_unique_id, [language.toLowerCase(), uniqueId], function (err, dbRes) {
+    language = validateLanguage(language);
+    connection.query(queries.update_preferred_language_by_unique_id, [language, uniqueId], function (err, dbRes) {
         if (err) {
             Logger.error(err.stack);
             return res.status(500).send(err.message);

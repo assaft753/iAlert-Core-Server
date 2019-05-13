@@ -13,6 +13,7 @@ Logger.level = 'debug';
 
 //------- Shelters -------//
 
+/** EndPoint to get all shelters */
 router.get('/shelters', function (req, res) {
     connection.query(queries.select_all_shelters, function (err, dbRes) {
         if (err) {
@@ -31,6 +32,7 @@ router.get('/shelters', function (req, res) {
     });
 });
 
+/** EndPoint to get all the approved shelters at a specific area code */
 router.get('/shelters/safeZones', function (req, res) {
     var areaCode = req.query.area_code;
     if (helper.isEmpty(areaCode)) {
@@ -56,6 +58,7 @@ router.get('/shelters/safeZones', function (req, res) {
     });
 });
 
+/** EndPoint to post unapproved new shelter by a specific user */
 router.post('/shelters', function (req, res) {
     var city = req.body.city;
     var userEmail = req.body.user_email;
@@ -112,7 +115,7 @@ router.post('/shelters', function (req, res) {
     });
 });
 
-
+/** EndPoint to update a specific shelter to be approved */
 router.put('/shelters', function (req, res) {
     var id = req.query.id;
 
@@ -133,6 +136,7 @@ router.put('/shelters', function (req, res) {
     });
 });
 
+/** EndPoint to delete a specific shelter from database */
 router.delete('/shelters', function (req, res) {
     var id = req.query.id;
 
@@ -155,6 +159,7 @@ router.delete('/shelters', function (req, res) {
 
 //------- Devices -------//
 
+/** EndPoint to get all devices that are in a specific area code */
 router.get('/devices', function (req, res) {
     var areaCode = req.query.area_code;
 
@@ -182,6 +187,7 @@ router.get('/devices', function (req, res) {
     });
 });
 
+/** EndPoint to update war mode for a device (1 for war mod otherwize 0) */
 router.put('/devices/update_war_mode', function (req, res) {
    var isWarMode = req.body.is_war_mode;
    var uniqueId = req.body.unique_id;
@@ -210,6 +216,7 @@ router.put('/devices/update_war_mode', function (req, res) {
 
 //------- Users -------//
 
+/** EndPoint to post a new user with matches fields */
 router.post('/users/withPoints', function (req, res) {
     var email = req.body.email;
     var admin = req.body.admin ? req.body.admin : false;
@@ -234,6 +241,7 @@ router.post('/users/withPoints', function (req, res) {
         });
 });
 
+/** EndPoint to post a new user */
 router.post('/users', function (req, res) {
     var email = req.body.email;
     var admin = req.body.admin ? req.body.admin : false;
@@ -254,6 +262,7 @@ router.post('/users', function (req, res) {
     });
 });
 
+/** EndPoint to increase the approved points of a user */
 router.put('/users/points_approved', function (req, res) {
     var email = req.query.email;
 
@@ -273,6 +282,7 @@ router.put('/users/points_approved', function (req, res) {
     });
 });
 
+/** EndPoint to increase the collected points of a user */
 router.put('/users/points_collected', function (req, res) {
     var email = req.query.email;
 
@@ -292,6 +302,7 @@ router.put('/users/points_collected', function (req, res) {
     });
 });
 
+/** EndPoint to increase the declined points of a user */
 router.put('/users/points_declined', function (req, res) {
     var email = req.query.email;
 
@@ -311,6 +322,7 @@ router.put('/users/points_declined', function (req, res) {
     });
 });
 
+/** EndPoint to get a specific user by email */
 router.get('/users', function (req, res) {
     var email = req.query.email;
 
@@ -333,6 +345,7 @@ router.get('/users', function (req, res) {
     });
 });
 
+/** Endpoint to register a user to firebase (for collection shelters app) */
 router.post('/users/register', function (req, res) {
     var email = req.query.email;
     var password = req.query.password;
@@ -375,6 +388,7 @@ router.post('/users/register', function (req, res) {
 
 //------- Areas -------//
 
+/** EndPoint to post a new area */
 router.post('/areas', function (req, res) {
     var areaCode = req.body.area_code;
     var city = req.body.city;
@@ -445,6 +459,7 @@ router.post('/areas', function (req, res) {
     });
 });
 
+/** EndPoint to get all areas */
 router.get('/areas/getAll', function (req, res) {
    connection.query(queries.select_all_areas, [], function (err, dbRes) {
        if (err) {
@@ -460,6 +475,7 @@ router.get('/areas/getAll', function (req, res) {
    })
 });
 
+/** EndPoint to get area_code of a city */
 router.get('/areas', function (req, res) {
     var city = req.query.city;
 
@@ -480,7 +496,8 @@ router.get('/areas', function (req, res) {
             Logger.error(errMessage);
             return res.status(errCode).send(errMessage);
         } else if (!helper.isEmpty(foundArea)) {
-            return res.status(200).send(foundArea.area_code);
+            var areaCodeObj = {'area_code': foundArea.area_code};
+            return res.status(200).send(areaCodeObj);
         } else {
             Logger.error('Could not get area. Error: Could not find any area for city name: ' + cityName);
             return res.status(404).send('Could not find any area for city name: ' + cityName);
@@ -488,6 +505,7 @@ router.get('/areas', function (req, res) {
     });
 });
 
+/** EndPoint to post a specific preferred area (by area code) to a specific device (by unique_id) */
 router.post('/areas/preferred', function (req, res) {
     var areaCode = req.body.area_code;
     var uniqueId = req.body.unique_id;
@@ -534,6 +552,7 @@ router.post('/areas/preferred', function (req, res) {
     });
 });
 
+/** EndPoint to get all existing preferred areas for a specific device */
 router.get('/areas/preferred', function (req, res) {
     var uniqueId = req.query.unique_id;
 
@@ -564,7 +583,7 @@ router.get('/areas/preferred', function (req, res) {
     });
 });
 
-
+/** EndPoint to delete all existing preferred areas for a specific device */
 router.delete('/areas/allPreferred', function (req, res) {
     var uniqueId = req.query.unique_id;
 
@@ -595,6 +614,7 @@ router.delete('/areas/allPreferred', function (req, res) {
     });
 });
 
+/** EndPoint to delete one existing preferred area by city name for a specific device */
 router.delete('/areas/OnePreferred', function (req, res) {
     var uniqueId = req.query.unique_id;
     var areaCode = req.query.area_code;
