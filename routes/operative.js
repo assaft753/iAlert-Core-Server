@@ -191,45 +191,55 @@ router.get('/notify', function (req, res)  {
         return res.status(400).send('area_code is mandatory');
     }
 
-    asyncDb.query(queries.insert_red_alert_notification, [areaCode], function (err, dbRes) {
-        if (!helper.isEmpty(err)) {
+    asyncDb.query(queries.select_area_by_area_code, [areaCode], function (err, dbRes) {
+        if (err) {
             Logger.error(err.stack);
             return res.status(500).send(err.message);
-        }
-        if (dbRes['affectedRows'] === 0) {
-            Logger.error('Could not notify to device. Error: No rows were inserted to DB');
-            return res.status(500).send('No rows were inserted to DB');
-        }
-
-        asyncDb.query(queries.select_max_time_by_area_code, [areaCode], function (err, maxTime) {
-            if (err) {
-                Logger.error(err.stack);
-                return res.status(500).send(err);
-            }
-
-            maxTime = maxTime[0].max_time_to_arrive_to_shelter;
-            var redAlertId = dbRes['insertId'];
-            asyncDb.query(queries.select_devices_by_area_code, [areaCode], function (err, devices) {
+        } else if (helper.isEmpty(dbRes)) {
+            Logger.debug('Could not find area with area_code: ' + areaCode + ' in DB');
+            return res.status(404).send('Could not find area with area_code: ' + areaCode + ' in DB');
+        } else {
+            asyncDb.query(queries.insert_red_alert_notification, [areaCode], function (err, dbRes) {
                 if (!helper.isEmpty(err)) {
                     Logger.error(err.stack);
-                    return res.status(500).send(err);
+                    return res.status(500).send(err.message);
+                }
+                if (dbRes['affectedRows'] === 0) {
+                    Logger.error('Could not notify to device. Error: No rows were inserted to DB');
+                    return res.status(500).send('No rows were inserted to DB');
                 }
 
-                var promises = [];
-                
-                devices.forEach(function (device) {
-                    promises.push(createNotficationForDevice(device, redAlertId, maxTime, true, null));
-                });
+                asyncDb.query(queries.select_max_time_by_area_code, [areaCode], function (err, maxTime) {
+                    if (err) {
+                        Logger.error(err.stack);
+                        return res.status(500).send(err);
+                    }
 
-                Logger.debug('Going to notify all signed devices for area code: ' + areaCode);
-                Promise.all(promises)
-                    .then(function () {
-                      sendNotificationToDevicesWhichContainAreaAsPreferred(areaCode);
-                    }).catch(function (error) {
-                        Logger.debug('Failed to notify signed devices with Error: ' + error);
+                    maxTime = maxTime[0].max_time_to_arrive_to_shelter;
+                    var redAlertId = dbRes['insertId'];
+                    asyncDb.query(queries.select_devices_by_area_code, [areaCode], function (err, devices) {
+                        if (!helper.isEmpty(err)) {
+                            Logger.error(err.stack);
+                            return res.status(500).send(err);
+                        }
+
+                        var promises = [];
+
+                        devices.forEach(function (device) {
+                            promises.push(createNotficationForDevice(device, redAlertId, maxTime, true, null));
+                        });
+
+                        Logger.debug('Going to notify all signed devices for area code: ' + areaCode);
+                        Promise.all(promises)
+                            .then(function () {
+                                sendNotificationToDevicesWhichContainAreaAsPreferred(areaCode);
+                            }).catch(function (error) {
+                            Logger.debug('Failed to notify signed devices with Error: ' + error);
+                        });
+                    });
                 });
             });
-        });
+        }
     });
 });
 
