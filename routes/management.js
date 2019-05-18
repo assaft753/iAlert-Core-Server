@@ -207,7 +207,7 @@ router.put('/devices/update_war_mode', function (req, res) {
             Logger.error(err.stack);
             return res.status(500).send(err.message);
         } else {
-            Logger.info('Update war mode for device successfully');
+            Logger.info('Update war mode with value: ' + isWarMode + ' for device successfully');
             return res.status(200).send(dbRes);
         }
     });
